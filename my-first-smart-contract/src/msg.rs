@@ -49,13 +49,13 @@ pub enum ExecuteMsg {
         /// at name "{attribute_prefix}.{contract_base_name}" and will be plain text.
         attribute_text: String,
     },
-    // /// This execution route will send the funds passed in to the contract to the target address.
-    // /// This example will illustrate using cosmwasm's provided functionality for Coin management.
-    // SendFunds {
-    //     /// The bech32 address of the recipient on the Provenance network.  All funds provided to
-    //     /// the contract will be sent to this address.
-    //     recipient_address: String,
-    // },
+    /// This execution route will send the funds passed in to the contract to the target address.
+    /// This example will illustrate using cosmwasm's provided functionality for Coin management.
+    SendFunds {
+        /// The bech32 address of the recipient on the Provenance network.  All funds provided to
+        /// the contract will be sent to this address.
+        recipient_address: String,
+    },
 }
 
 /// The QueryMsg will generally be an enum to allow for multiple different types of queries.
@@ -78,7 +78,3 @@ pub enum QueryMsg {
     /// be used to fetch the current counter value.
     QueryState {},
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct MigrateMsg {}
