@@ -1,0 +1,22 @@
+[versions]
+provenanceEventStream = "0.6.0-rc7"
+kotlinCoroutines = "1.5.2"
+scarlet = "0.1.12"
+
+[libraries]
+provenanceEventStreamApi = { module = "io.provenance.eventstream:es-api", version.ref = "provenanceEventStream" }
+provenanceEventStreamApiModel = { module = "io.provenance.eventstream:es-api-model", version.ref = "provenanceEventStream" }
+provenanceEventStreamCli = { module = "io.provenance.eventstream:es-cli", version.ref = "provenanceEventStream" }
+provenanceEventStreamCore = { module = "io.provenance.eventstream:es-core", version.ref = "provenanceEventStream" }
+webSocketOkHttp = { module = "com.tinder.scarlet:websocket-okhttp", version.ref = "scarlet" }
+messageAdapterMoshi = { module = "com.tinder.scarlet:message-adapter-moshi", version.ref = "scarlet"}
+scarlet = { module = "com.tinder.scarlet:scarlet", version.ref = "scarlet"}
+streamAdapterCoroutines = { module = "com.tinder.scarlet:stream-adapter-coroutines", version.ref = "scarlet" }
+coroutinesCoreJvm = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinCoroutines" }
+coroutinesReactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "kotlinCoroutines" }
+coroutinesJdk8 = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8", version.ref = "kotlinCoroutines" }
+coroutinesSLF4J = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j", version.ref = "kotlinCoroutines" }
+
+[bundles]
+provenance = ["provenanceEventStreamApi", "provenanceEventStreamApiModel", "provenanceEventStreamCli", "provenanceEventStreamCore", "webSocketOkHttp", "messageAdapterMoshi", "scarlet", "streamAdapterCoroutines"]
+coroutines = ["coroutinesCoreJvm","coroutinesReactor","coroutinesJdk8","coroutinesSLF4J"]
