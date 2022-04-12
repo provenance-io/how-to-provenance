@@ -1,5 +1,3 @@
-use std::ops::{Add, AddAssign};
-
 use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, to_binary, Uint128, Coin};
 use provwasm_std::{ProvenanceMsg, ProvenanceQuery, bind_name, NameBinding, ProvenanceQuerier, add_attribute, AttributeValueType};
 
@@ -74,7 +72,7 @@ pub fn execute(
 ) -> Result<Response<ProvenanceMsg>, ContractError> {
     match msg {
         ExecuteMsg::IncrementCounter { increment_amount } => increment_counter(deps, info, increment_amount),
-        ExecuteMsg::AddAttribute { attribute_name, attribute_text } => add_attribute_to_contract(deps, info, env, attribute_name, attribute_text),
+        ExecuteMsg::AddAttribute { attribute_prefix, attribute_text } => add_attribute_to_contract(deps, info, env, attribute_prefix, attribute_text),
     }
 }
 
@@ -89,8 +87,8 @@ pub fn query(
     // place, this value can be guaranteed to be present.
     let contract_state = state_read(deps.storage).load()?;
     match msg {
-        QueryMsg::QueryAttribute { attribute_name } => {
-            let target_attribute_name = format!("{}.{}", attribute_name, contract_state.contract_base_name);
+        QueryMsg::QueryAttribute { attribute_prefix } => {
+            let target_attribute_name = format!("{}.{}", attribute_prefix, contract_state.contract_base_name);
             let provenance_querier = ProvenanceQuerier::new(&deps.querier);
             let attribute_wrapper = provenance_querier.get_attributes(env.contract.address, Some(target_attribute_name))?;
             if attribute_wrapper.attributes.len() != 1 {
@@ -110,7 +108,8 @@ pub fn migrate(
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {
-    Err(ContractError::generic_err("This contract cannot be migrated. Please see the migration example."))
+    // No-op migration
+    Ok(Response::new())
 }
 
 /// The flow of a contract is controlled by its return values to its various entry_point functions.

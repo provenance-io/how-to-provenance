@@ -41,17 +41,41 @@ pub enum ExecuteMsg {
     /// and the attribute_name value used in this route was "new", the newly-created attribute would be
     /// created with the name "new.testcontract.pb."
     AddAttribute {
-        /// The sub-name of contract_base_name to be used when creating the attribute.
-        attribute_name: String,
-        /// The text to use as the attribute body.
+        /// The sub-name of contract_base_name to be used when creating the attribute. This value will
+        /// be used to prefix the contract_base_name, stored in contract state, and will be combined with
+        /// it to reserve a new name and attribute combination.
+        attribute_prefix: String,
+        /// The text to use as the attribute body.  This value will be stored in the new attribute created
+        /// at name "{attribute_prefix}.{contract_base_name}" and will be plain text.
         attribute_text: String,
     },
+    // /// This execution route will send the funds passed in to the contract to the target address.
+    // /// This example will illustrate using cosmwasm's provided functionality for Coin management.
+    // SendFunds {
+    //     /// The bech32 address of the recipient on the Provenance network.  All funds provided to
+    //     /// the contract will be sent to this address.
+    //     recipient_address: String,
+    // },
 }
 
+/// The QueryMsg will generally be an enum to allow for multiple different types of queries.
+/// The entry_point for queries allows a read-only Deps<ProvenanceQuery>, so mutation of values
+/// is not expected for these routes.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    QueryAttribute { attribute_name: String },
+    /// This query will attempt to find an attribute with a name that starts with the given
+    /// prefix, and ends with the contract_base_name.  This mirrors the AddAttribute execution
+    /// route, and is designed to lookup existing attributes created by it. The AddAttribute
+    /// route creates String attributes, so the expected response value upon finding an attribute
+    /// will be the String value contained within the attribute.
+    QueryAttribute {
+        /// The prefix to an existing attribute, always ending in contract_base_name.
+        attribute_prefix: String,
+    },
+    /// This query will return the current values of the contract's State value, which is held
+    /// in internal storage.  The value of the counter is stored in State, so this route can also
+    /// be used to fetch the current counter value.
     QueryState {},
 }
 
