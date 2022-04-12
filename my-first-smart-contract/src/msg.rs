@@ -52,7 +52,6 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     QueryAttribute { attribute_name: String },
-    QueryCounter {},
     QueryState {},
 }
 

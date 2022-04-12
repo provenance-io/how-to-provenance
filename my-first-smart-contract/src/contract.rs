@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign};
 
-use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, to_binary, Uint128};
-use provwasm_std::{ProvenanceMsg, ProvenanceQuery, bind_name, NameBinding, ProvenanceQuerier};
+use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, to_binary, Uint128, Coin};
+use provwasm_std::{ProvenanceMsg, ProvenanceQuery, bind_name, NameBinding, ProvenanceQuerier, add_attribute, AttributeValueType};
 
 use crate::{
     error::ContractError,
@@ -18,17 +18,9 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InitMsg,
 ) -> Result<Response<ProvenanceMsg>, ContractError> {
-    // The flow of a contract is controlled by its return values to its various entry_point functions.
-    // If any scenario arises during contract execution that is undesirable or would cause a bad state,
-    // returning an error like this is a way to ensure that all changes are completely disregarded.
-    // 
-    // If funds are ever included in the MessageInfo.funds, the smart contract itself is transferred those funds.
-    // This check prevents an instantiation message from seeding the contract with funds that it does not need.
-    if !info.funds.is_empty() {
-        return Err(ContractError::InvalidFunds { 
-            explanation: format!("Funds should not be included in the transaction when instantiating the contract. Found funds: {:?}", info.funds), 
-        });
-    }
+    // Verify that no funds were sent into the contract by the address that is instantiating it.  Those funds
+    // would be held permanently by the contract's address, so any request attempting to do so should be rejected.
+    check_funds_are_empty(info.funds)?;
     // Create an instance of the contract's State, which holds the contract's base name and a counter for later.
     // The base name will be used to create attributes later, so it's very important that that value is recorded 
     // in a place that can be located later.
@@ -76,25 +68,13 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut<ProvenanceQuery>,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response<ProvenanceMsg>, ContractError> {
     match msg {
-        ExecuteMsg::IncrementCounter { increment_amount } => { 
-            // If the increment amount provided in the message was present, use it.
-            // Otherwise, default to the standard increment amount of 1.
-            let amount_to_increment: Uint128 = increment_amount.unwrap_or(1).into();
-            let mut state_storage = state(deps.storage);
-            // Load the contract state in a mutable manner, allowing the internals to be modified in this execution route
-            let mut contract_state = state_storage.load()?;
-            contract_state.contract_counter += amount_to_increment;
-            state_storage.save(&contract_state)?;
-            Ok(Response::new().add_attribute("action", "execute").add_attribute("new_counter_value", contract_state.contract_counter.to_string()))
-        }
-        ExecuteMsg::AddAttribute { attribute_name, attribute_text } => {
-            return Err(ContractError::generic_err("Not complete yet"))
-        }
+        ExecuteMsg::IncrementCounter { increment_amount } => increment_counter(deps, info, increment_amount),
+        ExecuteMsg::AddAttribute { attribute_name, attribute_text } => add_attribute_to_contract(deps, info, env, attribute_name, attribute_text),
     }
 }
 
@@ -118,9 +98,6 @@ pub fn query(
             }
             Ok(attribute_wrapper.attributes.first().unwrap().value.to_owned())
         },
-        QueryMsg::QueryCounter {} => {
-            Ok(to_binary(&contract_state.contract_counter)?)
-        },
         QueryMsg::QueryState {} => {
             Ok(to_binary(&contract_state)?)
         }
@@ -129,9 +106,84 @@ pub fn query(
 
 #[entry_point]
 pub fn migrate(
-    deps: DepsMut<ProvenanceQuery>,
+    _deps: DepsMut<ProvenanceQuery>,
     _env: Env,
-    msg: MigrateMsg,
+    _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {
-    Err(ContractError::generic_err("No migrate exists"))
+    Err(ContractError::generic_err("This contract cannot be migrated. Please see the migration example."))
+}
+
+/// The flow of a contract is controlled by its return values to its various entry_point functions.
+/// If any scenario arises during contract execution that is undesirable or would cause a bad state,
+/// returning an error like this is a way to ensure that all changes are completely disregarded.
+/// 
+/// If funds are ever included in the MessageInfo.funds, the smart contract itself is transferred those funds.
+/// This check prevents an instantiation message from seeding the contract with funds that it does not need.
+fn check_funds_are_empty(funds: Vec<Coin>) -> Result<(), ContractError> {
+    if !funds.is_empty() {
+        Err(ContractError::InvalidFunds { 
+            explanation: format!("Funds should not be included in the transaction when instantiating the contract. Found funds: {:?}", funds), 
+        })
+    } else {
+        Ok(())
+    }
+}
+
+fn increment_counter(
+    deps: DepsMut<ProvenanceQuery>,
+    info: MessageInfo,
+    increment_amount: Option<u128>,
+) -> Result<Response<ProvenanceMsg>, ContractError> {
+    // Leverage the funds check to ensure that this free execution route does not receive funds at all
+    check_funds_are_empty(info.funds)?;
+    // If the increment amount provided in the message was present, use it.
+    // Otherwise, default to the standard increment amount of 1. This allows the user to
+    // completely omit the value from the request payload and still get an increment.
+    let amount_to_increment: Uint128 = increment_amount.unwrap_or(1).into();
+    let mut state_storage = state(deps.storage);
+    // Load the contract state in a mutable manner, allowing the internals to be modified in this execution route
+    let mut contract_state = state_storage.load()?;
+    contract_state.contract_counter += amount_to_increment;
+    // After incrementing the counter, it must be saved to the contract's internal state. This will persist
+    // the value, and subsequent increments will see the new value. This will also be available and evident in
+    // the query routes.
+    state_storage.save(&contract_state)?;
+    Ok(Response::new().add_attribute("action", "execute").add_attribute("new_counter_value", contract_state.contract_counter.to_string()))
+}
+
+fn add_attribute_to_contract(
+    deps: DepsMut<ProvenanceQuery>,
+    info: MessageInfo,
+    env: Env,
+    attribute_name: String,
+    attribute_text: String,
+) -> Result<Response<ProvenanceMsg>, ContractError> {
+    // Leverage the funds check to ensure that this free execution route does not receive funds at all
+    check_funds_are_empty(info.funds)?;
+    let contract_state = state(deps.storage).load()?;
+    let new_attribute_name = format!("{}.{}", attribute_name, contract_state.contract_base_name);
+    let provenance_querier = ProvenanceQuerier::new(&deps.querier);
+    // Check to ensure that the new name does not exist.  If the ProvenanceQuerier does not return an error when
+    // searching for the name, that means that the attribute was correctly fetched, and is already set on the contract.
+    // This check will prevent execution calls from adding duplicate attributes and/or names, which is allowed in the name module of the 
+    // Provenance blockchain.  For the purposes of this contract, only one attribute should exist per sub-name.
+    if let Ok(name_result) = provenance_querier.resolve_name(&new_attribute_name) {
+        return Err(ContractError::NameAlreadyExists { name: name_result.name, owner_address: name_result.address.to_string() });
+    }
+    let bind_name_msg = bind_name(
+        &new_attribute_name, 
+        env.contract.address.clone(), 
+        NameBinding::Restricted,
+    )?;
+    let add_attribute_msg = add_attribute(
+        env.contract.address,
+        &new_attribute_name,
+        to_binary(&attribute_text)?,
+        AttributeValueType::String,
+    )?;
+    Ok(Response::new()
+        .add_message(bind_name_msg)
+        .add_message(add_attribute_msg)
+        .add_attribute("action", "execute_add_attribute")
+        .add_attribute("new_attribute_name", new_attribute_name))
 }

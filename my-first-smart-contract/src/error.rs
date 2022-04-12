@@ -14,6 +14,9 @@ pub enum ContractError {
     #[error("{0}")]
     GenericError(String),
 
+    #[error("Expected the name {name} to not exist, but it was already bound to address {owner_address}")]
+    NameAlreadyExists { name: String, owner_address: String },
+
     #[error("Invalid funds were provided: {explanation}")]
     InvalidFunds { explanation: String },
 }
