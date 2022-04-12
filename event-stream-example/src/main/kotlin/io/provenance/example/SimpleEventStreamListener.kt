@@ -4,6 +4,7 @@ import io.provenance.eventstream.decoder.moshiDecoderAdapter
 import io.provenance.eventstream.extensions.decodeBase64
 import io.provenance.eventstream.net.okHttpNetAdapter
 import io.provenance.eventstream.stream.flows.blockFlow
+import io.provenance.eventstream.stream.flows.liveBlockFlow
 import io.provenance.eventstream.stream.models.extensions.blockEvents
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.eventstream.stream.models.extensions.txData
@@ -25,21 +26,23 @@ suspend fun main() {
     val netAdapter = okHttpNetAdapter(System.getenv("NODE_URI"))
     val decoderAdapter = moshiDecoderAdapter()
 
-    val startingBlockHeight = System.getenv("START_HEIGHT")?.toLong() ?: netAdapter.rpcAdapter.getCurrentHeight()
+    val startingBlockHeight = System.getenv("START_HEIGHT")?.toLong()
     println("Listening for events $EVENTS from height $startingBlockHeight")
 
     // initialize the event stream flow
-    blockFlow(netAdapter, decoderAdapter, from = startingBlockHeight)
-        .collect { blockData ->
-            blockData.blockResult.txEvents(blockData.block.dateTime()) { index -> blockData.block.txData(index) }
-                .filter { txEvent -> txEvent.eventType in EVENTS } // filter out events you are not looking for
-                .takeIf { it.isNotEmpty() }
-                ?.also {
-                    println("Received block with desired events at height ${blockData.height}")
-                }
-                ?.joinToString("\n") { blockEvent ->
-                    // event attributes are key/value pairs nested under the event that are base64-encoded
-                    "${blockEvent.eventType}: " +  blockEvent.attributes.joinToString("\n\t", prefix = "[\n\t", postfix = "\n]") { attribute -> "${attribute.key?.decodeBase64()}: ${attribute.value?.decodeBase64()}" }
-                }?.let(::println)
-        }
+    when (startingBlockHeight) {
+        null -> liveBlockFlow(netAdapter, decoderAdapter) // no starting height, listen for live blocks
+        else -> blockFlow(netAdapter, decoderAdapter, from = startingBlockHeight) // starting height provided, use combined historical/live flow
+    }.collect { blockData ->
+        blockData.blockResult.txEvents(blockData.block.dateTime()) { index -> blockData.block.txData(index) }
+            .filter { txEvent -> txEvent.eventType in EVENTS } // filter out events you are not looking for
+            .takeIf { it.isNotEmpty() }
+            ?.also {
+                println("Received block with desired events at height ${blockData.height}")
+            }
+            ?.joinToString("\n") { blockEvent ->
+                // event attributes are key/value pairs nested under the event that are base64-encoded
+                "${blockEvent.eventType}: " +  blockEvent.attributes.joinToString("\n\t", prefix = "[\n\t", postfix = "\n]") { attribute -> "${attribute.key?.decodeBase64()}: ${attribute.value?.decodeBase64()}" }
+            }?.let(::println)
+    }
 }
