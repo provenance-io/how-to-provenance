@@ -202,4 +202,10 @@ The query should yield the following payload:
 }
 ```
 
-Done! You can now store, instantiate, and communicate with a smart contract on the Provenance system!
+That math looks good to me! 
+
+Well done! You can now store, instantiate, and communicate with a smart contract on the Provenance blockchain!
+
+## Build your own
+
+Want to build your own smart contract from scratch? The [provwasm](https://github.com/provenance-io/provwasm) repository has an excellent [tutorial](https://github.com/provenance-io/provwasm/tree/main/docs/tutorial) for building a smart contract repository on the Provenance blockchain.
