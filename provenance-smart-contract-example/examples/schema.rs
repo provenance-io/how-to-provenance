@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use my_first_smart_contract::msg::{ExecuteMsg, InitMsg, QueryMsg};
+use provenance_smart_contract_example::msg::{ExecuteMsg, InitMsg, QueryMsg};
 
 /// This rust file is used to automatically generate a schema output for all entrypoint values.
 /// This is to help users of the contract get an idea of how to format the json used when calling
