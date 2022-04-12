@@ -1,5 +1,5 @@
 [package]
-name = "my-first-smart-contract"
+name = "provenance-smart-contract-example"
 version = "0.0.1"
 authors = ["Jake Schwartz <jschwartz@figure.com>"]
 edition = "2018"
