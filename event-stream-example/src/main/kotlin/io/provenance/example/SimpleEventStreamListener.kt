@@ -25,7 +25,7 @@ suspend fun main() {
     val netAdapter = okHttpNetAdapter(System.getenv("NODE_URI"))
     val decoderAdapter = moshiDecoderAdapter()
 
-    val startingBlockHeight = System.getenv("START_HEIGHT")?.toLong() ?: 7348159 ?: netAdapter.rpcAdapter.getCurrentHeight()
+    val startingBlockHeight = System.getenv("START_HEIGHT")?.toLong() ?: netAdapter.rpcAdapter.getCurrentHeight()
     println("Listening for events $EVENTS from height $startingBlockHeight")
 
     // initialize the event stream flow
