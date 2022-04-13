@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InitMsg",
+  "description": "The InitMsg is used once in the smart contract lifecycle. When the instantiate execution route is invoked, this message is expected as input.  Clearly defining all requirements for the initial state of the smart contract is key to a well-made and useful contract.",
+  "type": "object",
+  "required": [
+    "contract_base_name"
+  ],
+  "properties": {
+    "contract_base_name": {
+      "description": "This value will be used to bind a name to the smart contract, using Provenance's name module.  This is assisted by the provwasm library.",
+      "type": "string"
+    },
+    "starting_counter": {
+      "description": "This value will be the initial counter value, which will be used to display some functionality in simple routes. Note that it is wrapped in an Option, which makes it an optional input parameter during instantiation.  If left blank, the initial value will be zero.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint128",
+      "minimum": 0.0
+    }
+  }
+}
