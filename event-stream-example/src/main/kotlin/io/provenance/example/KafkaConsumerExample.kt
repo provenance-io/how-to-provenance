@@ -28,9 +28,9 @@ import org.apache.kafka.clients.producer.ProducerConfig
 
 suspend fun main() {
     // the topic to publish to/read from, can override if needed. The default will work with the docker-compose setup
-    val topicName = System.getenv("KAFKA_TOPIC") ?: "exampleTopic"
+    val topicName = System.getenv("KAFKA_TOPIC") ?: Defaults.KAFKA_TOPIC
     // the comma-separated kafka servers list
-    val kafkaServers = System.getenv("KAFKA_BOOTSTRAP_SERVERS_CONFIG") ?: "localhost:9092"
+    val kafkaServers = System.getenv("KAFKA_BOOTSTRAP_SERVERS_CONFIG") ?: Defaults.KAFKA_SERVERS
 
     // for the sake of example, we are going to launch a producer/consumer in the same process
     // in reality, these would be entirely different services
@@ -50,7 +50,7 @@ suspend fun main() {
  * A Kafka producer process that reads from the event stream and then publishes to the topic via the KafkaBlockSink
  */
 suspend fun startProducer(kafkaServers: String, topicName: String) {
-    val nodeUri = System.getenv("NODE_URI") ?: "http://localhost:26657"
+    val nodeUri = System.getenv("NODE_URI") ?: Defaults.NODE_URI
     val netAdapter = okHttpNetAdapter(nodeUri)
     val decoderAdapter = moshiDecoderAdapter()
 
