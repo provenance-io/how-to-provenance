@@ -8,8 +8,11 @@ group = "io.provenance.example"
 version = "1.0-SNAPSHOT"
 
 dependencies {
-    implementation(libs.bundles.provenance)
-    implementation(libs.bundles.coroutines)
+    listOf(
+        libs.bundles.provenance,
+        libs.bundles.coroutines,
+        libs.bundles.kafka,
+    ).forEach(::implementation)
 
     testImplementation(kotlin("test"))
 }
