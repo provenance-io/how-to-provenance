@@ -23,7 +23,8 @@ val EVENTS = listOf("wasm")
  * START_HEIGHT: a specific block height to start listening for events at (otherwise, the latest height will be used)
  */
 suspend fun main() {
-    val netAdapter = okHttpNetAdapter(System.getenv("NODE_URI"))
+    val nodeUri = System.getenv("NODE_URI") ?: "http://localhost:26657"
+    val netAdapter = okHttpNetAdapter(nodeUri)
     val decoderAdapter = moshiDecoderAdapter()
 
     val startingBlockHeight = System.getenv("START_HEIGHT")?.toLong()

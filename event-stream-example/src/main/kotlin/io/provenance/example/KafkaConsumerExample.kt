@@ -50,7 +50,8 @@ suspend fun main() {
  * A Kafka producer process that reads from the event stream and then publishes to the topic via the KafkaBlockSink
  */
 suspend fun startProducer(kafkaServers: String, topicName: String) {
-    val netAdapter = okHttpNetAdapter(System.getenv("NODE_URI"))
+    val nodeUri = System.getenv("NODE_URI") ?: "http://localhost:26657"
+    val netAdapter = okHttpNetAdapter(nodeUri)
     val decoderAdapter = moshiDecoderAdapter()
 
     // the block height to start listening from
