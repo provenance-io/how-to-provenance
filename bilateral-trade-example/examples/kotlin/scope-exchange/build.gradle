@@ -1,0 +1,27 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.5.10'
+    id 'application'
+}
+
+group 'io.provenance'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClassName = "ScopeExchangeKt"
+}
+
+run {
+    standardInput = System.in
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    
+    implementation group: 'io.provenance.hdwallet', name: 'hdwallet', version: '0.1.15'
+    implementation group: 'io.provenance.client', name: 'pb-grpc-client-kotlin', version: '1.0.5'
+    implementation group: 'io.provenance', name: 'proto-kotlin', version: '1.8.0'
+}

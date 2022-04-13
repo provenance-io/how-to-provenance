@@ -1,0 +1,41 @@
+[package]
+name = "bilateral-trade-example"
+version = "1.0.0-beta"
+authors = ["Ken Talley <ktalley@figure.com>", "Jake Schwartz <jschwartz@figure.com>", "Pierce Trey <ptrey@figure.com>"]
+edition = "2018"
+
+exclude = [
+  "bilateral_exchange.wasm",
+  "checksums.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+#backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { version = "1.0.0-beta5", features = ["staking"] }
+cosmwasm-storage = { version = "1.0.0-beta5" }
+cw-storage-plus = { version = "0.12.1" }
+provwasm-std = { git = "https://github.com/provenance-io/provwasm", rev = "6cbb69600db3a76509862e80934fa14be45872cd" }
+schemars = "0.8.1"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.23" }
+
+[dev-dependencies]
+cosmwasm-schema = { version = "1.0.0-beta5" }
+provwasm-mocks = { git = "https://github.com/provenance-io/provwasm", rev = "6cbb69600db3a76509862e80934fa14be45872cd" }
