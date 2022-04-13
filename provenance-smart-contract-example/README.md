@@ -121,7 +121,7 @@ provenanced tx wasm store my/path/to/how-to-provenance/provenance-smart-contract
 ```
 This command will automatically store the generated smart contract on your localnet.  Note: This uses the `--yes` flag, which will automatically run the transaction after verification that it is without errors.  To initiate a manual-confirmation mode, simply omit the `--yes` flag.  
 
-The resulting output is piped to `jq`, which makes it much more presentable.  Within the payload, look for the `code_id` value.  The code id is used as a reference point when instantiating the smart contract.  If you have followed this guide from a clean setup, the `code_id` value should be `1` because no other smart contracts have been stored on your localnet.  To automatically find this value with `jq`, modify the end of the command to be: `jq -r '.logs[] | select(.msg_index == 0) | .events[] | select(.type == "store_code") | .attributes[0].value`.
+The resulting output is piped to `jq`, which makes it much more presentable.  Within the payload, look for the `code_id` value.  The code id is used as a reference point when instantiating the smart contract.  If you have followed this guide from a clean setup, the `code_id` value should be `1` because no other smart contracts have been stored on your localnet.  To automatically find this value with `jq`, modify the end of the command to be: `jq -r '.logs[] | select(.msg_index == 0) | .events[] | select(.type == "store_code") | .attributes[0].value'`.
 
 To further verify that the wasm was fully stored, you can query the `wasm` module to check for the code that was stored:
 ```sh
