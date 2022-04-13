@@ -80,6 +80,10 @@ pub enum QueryMsg {
     /// in internal storage.  The value of the counter is stored in State, so this route can also
     /// be used to fetch the current counter value.
     QueryState {},
+    /// This query will return the current contract name and version stored in the VersionInfo
+    /// struct.  This is contained in the version_info.rs file, and is loaded from the VERSION_INFO
+    /// const Item.
+    QueryVersion {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -121,12 +121,9 @@ pub fn query(
     env: Env,
     msg: QueryMsg,
 ) -> Result<Binary, ContractError> {
-    // Fetch the contract state value from storage.  Due to the contract having a persistent state internal
-    // storage available, and because the query entry_point cannot be executed until instantiation has taken
-    // place, this value can be guaranteed to be present.
-    let contract_state = state_read(deps.storage).load()?;
     match msg {
         QueryMsg::QueryAttribute { attribute_prefix } => {
+            let contract_state = state_read(deps.storage).load()?;
             // Construct the expected attribute name from the prefix and the contract base name.  This mirrors
             // the formatting used in the execute route: AddAttribute.
             let target_attribute_name =
@@ -155,10 +152,12 @@ pub fn query(
                 .value
                 .to_owned())
         }
-        // The state has been pre-fetched before all query routes.  It derives Serialize and Deserialize, so
-        // it is safe to use to_binary on it to use the entire value as a response and serialize it to a Binary
-        // struct.
-        QueryMsg::QueryState {} => Ok(to_binary(&contract_state)?),
+        // The state  derives Serialize and Deserialize, so it is safe to use to_binary on it to use the
+        // entire value as a response and serialize it to a Binary struct.
+        QueryMsg::QueryState {} => Ok(to_binary(&state_read(deps.storage).load()?)?),
+        // Load the version info in the same way that the state is loaded.  It also derives Serialize and Deserialize,
+        // so returning the entire VersionInfo struct as Binary is safe.
+        QueryMsg::QueryVersion {} => Ok(to_binary(&get_version_info(deps.storage)?)?),
     }
 }
 
@@ -1508,5 +1507,33 @@ mod tests {
                 error
             ),
         }
+    }
+
+    #[test]
+    fn test_query_version() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: None,
+            },
+        )
+        .expect("instantiation should succeed");
+        let version_info_binary = query(deps.as_ref(), mock_env(), QueryMsg::QueryVersion {})
+            .expect("version info query should succeed after an instantiation");
+        let version_info = from_binary::<VersionInfo>(&version_info_binary)
+            .expect("the query result should deserialize to a VersionInfo struct");
+        assert_eq!(
+            CONTRACT_NAME, version_info.contract,
+            "instantiation should set the correct contract name",
+        );
+        assert_eq!(
+            CONTRACT_VERSION, version_info.version,
+            "instantiation should set the correct contract version",
+        );
     }
 }
