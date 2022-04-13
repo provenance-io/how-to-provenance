@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::types::FeeCollectionDetail;
+
 /// The InitMsg is used once in the smart contract lifecycle. When the instantiate execution
 /// route is invoked, this message is expected as input.  Clearly defining all requirements
 /// for the initial state of the smart contract is key to a well-made and useful contract.
@@ -15,6 +17,7 @@ pub struct InitMsg {
     /// it an optional input parameter during instantiation.  If left blank, the initial
     /// value will be zero.
     pub starting_counter: Option<u128>,
+    pub increment_counter_fee: Option<FeeCollectionDetail>,
 }
 
 /// The ExecuteMsg will generally be an enum to allow for multiple different types of contract
@@ -77,4 +80,11 @@ pub enum QueryMsg {
     /// in internal storage.  The value of the counter is stored in State, so this route can also
     /// be used to fetch the current counter value.
     QueryState {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MigrateMsg {
+    pub new_counter_value: Option<u128>,
+    pub increment_counter_fee: Option<FeeCollectionDetail>,
 }

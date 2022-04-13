@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use provenance_smart_contract_example::msg::{ExecuteMsg, InitMsg, QueryMsg};
+use provenance_contract_migration_example::msg::{ExecuteMsg, InitMsg, MigrateMsg, QueryMsg};
 
 /// This rust file is used to automatically generate a schema output for all entrypoint values.
 /// This is to help users of the contract get an idea of how to format the json used when calling
@@ -16,5 +16,6 @@ fn main() {
 
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(InitMsg), &out_dir);
+    export_schema(&schema_for!(MigrateMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
 }
