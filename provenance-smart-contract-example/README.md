@@ -188,8 +188,8 @@ The initial value of the counter was `10`, and this command increments it by `5`
 provenanced query wasm contract-state smart \
 "$contract_address" \
 '{"query_state": {}}' \
-> --testnet \
-> --output json | jq
+--testnet \
+--output json | jq
 ```
 
 The query should yield the following payload:
