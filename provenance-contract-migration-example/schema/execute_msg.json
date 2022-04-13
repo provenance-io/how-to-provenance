@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "description": "The ExecuteMsg will generally be an enum to allow for multiple different types of contract execution, but for simple contracts, it can certainly simply be a struct.  The execute message defines a route in the contract that can execute transactions on the Provenance blockchain. These endpoints should be for various CRUD operations, and/or mutating the contract state for certain scenarios.",
+  "oneOf": [
+    {
+      "description": "This execution route increments the internal counter created during instantiation and stored in the contract state.  Note that the optional value used here is an unsigned type, ensuring that the account invoking the contract on this endpoint will be unable to enter a negative value by default.  Deserialization of the input JSON will fail if negatives are included.  This could be changed simply by changing the type to signed, if one were so inclined to do so.",
+      "type": "object",
+      "required": [
+        "increment_counter"
+      ],
+      "properties": {
+        "increment_counter": {
+          "type": "object",
+          "properties": {
+            "increment_amount": {
+              "description": "The amount to add to the internal contract counter.  If left blank, a default value of one will be used.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "This execution route will append an attribute to the contract itself, using its reserved contract_base_name value.  For example, if the base name of the contract was \"testcontract.pb\" and the attribute_name value used in this route was \"new\", the newly-created attribute would be created with the name \"new.testcontract.pb.\"",
+      "type": "object",
+      "required": [
+        "add_attribute"
+      ],
+      "properties": {
+        "add_attribute": {
+          "type": "object",
+          "required": [
+            "attribute_prefix",
+            "attribute_text"
+          ],
+          "properties": {
+            "attribute_prefix": {
+              "description": "The sub-name of contract_base_name to be used when creating the attribute. This value will be used to prefix the contract_base_name, stored in contract state, and will be combined with it to reserve a new name and attribute combination.",
+              "type": "string"
+            },
+            "attribute_text": {
+              "description": "The text to use as the attribute body.  This value will be stored in the new attribute created at name \"{attribute_prefix}.{contract_base_name}\" and will be plain text.",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "This execution route will send the funds passed in to the contract to the target address. This example will illustrate using cosmwasm's provided functionality for Coin management.",
+      "type": "object",
+      "required": [
+        "send_funds"
+      ],
+      "properties": {
+        "send_funds": {
+          "type": "object",
+          "required": [
+            "recipient_address"
+          ],
+          "properties": {
+            "recipient_address": {
+              "description": "The bech32 address of the recipient on the Provenance network.  All funds provided to the contract will be sent to this address.",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}
