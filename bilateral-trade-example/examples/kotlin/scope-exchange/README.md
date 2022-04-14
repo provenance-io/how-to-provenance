@@ -1,6 +1,7 @@
-# Scope Exchange Contract Example
+# Kotlin Scope Exchange Examples
 
-This folder contains an example contract that can be used to transfer value between two parties without the need for an
-intermediary to hold the asset/funds (the contract acts as escrow and holds the thing for sale and the funds purchasing that thing)
-and then swaps the two to the appropriate parties atomically in one transaction.
+## Project Prerequisites
+* Java JDK 11 (install via an sdk manager, like SdkMan)
+* Gradle for building/running the examples
 
+To run an example, use the following command `./gradlew run -PmainClass=<example class name>` where `example class name` is like `MarkerOwnedScopeExchangeKt` (note the Kt suffix for Kotlin, the name is based off of file name). You will be prompted for the various inputs needed by the script.
