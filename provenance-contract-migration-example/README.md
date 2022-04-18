@@ -69,7 +69,7 @@ rich mimic gravity wool moon above round insect rookie bridge feed blast later r
 
 Now that you have your own mnemonic, it's time to import it into the `build/node0` directory keychain for usage in your `provenanced` commands.  Run the following:
 ```sh
-provenanced keys add my_fee_collector \                                                                                  (testfiguretech/onboarding)
+provenanced keys add my_fee_collector \
 --home build/node0 \
 --hd-path "44'/1'/0'/0/0" \
 --recover \
