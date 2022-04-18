@@ -1,0 +1,10 @@
+[versions]
+hdWallet = "0.1.15"
+pbClient = "1.0.5"
+provenance = "1.8.0"
+
+[libraries]
+hdWallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "hdWallet" }
+pbClient = { module = "io.provenance.client:pb-grpc-client-kotlin", version.ref = "pbClient" }
+provenanceProto = { module = "io.provenance:proto-kotlin", version.ref = "provenance" }
+kotlinStdLib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
