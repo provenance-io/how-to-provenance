@@ -11,3 +11,7 @@ Typically a reference to data off-chain is in the form of a hash of binary data 
 Messages).
 
 For more information about the Metadata Module, please reference the [Provenance Blockchain Docs](https://docs.provenance.io/modules/metadata-module).
+
+To run the example, use the following command `./gradlew run`. Once you have run this once, you may re-use the same scope
+specification id by setting the env var `SCOPE_SPEC_UUID` (i.e. `SCOPE_SPEC_UUID=<your_uuid_here> ./gradlew run`). The
+example has defaults for your local chain-id and node uri, but you may override these as need be
