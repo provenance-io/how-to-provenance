@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
+    application
 }
 
 java {
@@ -25,4 +26,13 @@ tasks.withType<KotlinCompile> {
         freeCompilerArgs = listOf("-Xjsr305=strict")
         jvmTarget = "11"
     }
+}
+
+application {
+    mainClass.set("io.provenance.example.MainKt")
+}
+
+// Ensure that CLI input requests properly wait for user input
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
 }
