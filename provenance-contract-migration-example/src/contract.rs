@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    entry_point, to_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, Uint128,
+    entry_point, to_binary, Attribute, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, Uint128,
 };
 use provwasm_std::{
     add_attribute, bind_name, AttributeValueType, NameBinding, ProvenanceMsg, ProvenanceQuerier,
@@ -9,8 +9,9 @@ use provwasm_std::{
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InitMsg, QueryMsg},
+    msg::{ExecuteMsg, InitMsg, MigrateMsg, QueryMsg},
     state::{state, state_read, State},
+    version_info::{get_version_info, migrate_version_info, VersionInfo},
 };
 
 /// The instantiation entry_point is the first function that is ever executed in a smart contract, and
@@ -29,6 +30,10 @@ pub fn instantiate(
         info.funds,
         "funds should not be provided when instantiating the contract",
     )?;
+    // If a fee detail was provided, it should be validated to ensure that bad interactions do not occur downstream
+    if let Some(fee_detail) = &msg.increment_counter_fee {
+        fee_detail.self_validate(deps.api)?
+    }
     // Create an instance of the contract's State, which holds the contract's base name and a counter for later.
     // The base name will be used to create attributes later, so it's very important that that value is recorded
     // in a place that can be located later.
@@ -40,6 +45,7 @@ pub fn instantiate(
         // purposes.  In this case, the wrapper used is Uint128, and has an implementation for Into<u128>, which
         // automatically allows this u128 value to be converted with a simple .into() call.
         contract_counter: msg.starting_counter.unwrap_or(0).into(),
+        increment_counter_fee: msg.increment_counter_fee,
     };
     // Store the initial state in the contract's internal storage, which can be referenced during execution
     // and query routes later.
@@ -59,6 +65,10 @@ pub fn instantiate(
         // various sub-names.
         NameBinding::Restricted,
     )?;
+    // Before completing instantiation, the default contract name and version should be set in the version info
+    // struct and saved to internal storage.  Use the default helper functions declared in the version_info.rs file
+    // to do so
+    migrate_version_info(deps.storage)?;
     // After successful instantiation, a response must be returned containing the various messages and attributes
     // that will be included in the transaction that this instantiation creates.  Upon successful instantiation,
     // all messages included in the response will be executed and their actions will be completed.  In this case,
@@ -111,12 +121,9 @@ pub fn query(
     env: Env,
     msg: QueryMsg,
 ) -> Result<Binary, ContractError> {
-    // Fetch the contract state value from storage.  Due to the contract having a persistent state internal
-    // storage available, and because the query entry_point cannot be executed until instantiation has taken
-    // place, this value can be guaranteed to be present.
-    let contract_state = state_read(deps.storage).load()?;
     match msg {
         QueryMsg::QueryAttribute { attribute_prefix } => {
+            let contract_state = state_read(deps.storage).load()?;
             // Construct the expected attribute name from the prefix and the contract base name.  This mirrors
             // the formatting used in the execute route: AddAttribute.
             let target_attribute_name =
@@ -145,11 +152,85 @@ pub fn query(
                 .value
                 .to_owned())
         }
-        // The state has been pre-fetched before all query routes.  It derives Serialize and Deserialize, so
-        // it is safe to use to_binary on it to use the entire value as a response and serialize it to a Binary
-        // struct.
-        QueryMsg::QueryState {} => Ok(to_binary(&contract_state)?),
+        // The state  derives Serialize and Deserialize, so it is safe to use to_binary on it to use the
+        // entire value as a response and serialize it to a Binary struct.
+        QueryMsg::QueryState {} => Ok(to_binary(&state_read(deps.storage).load()?)?),
+        // Load the version info in the same way that the state is loaded.  It also derives Serialize and Deserialize,
+        // so returning the entire VersionInfo struct as Binary is safe.
+        QueryMsg::QueryVersion {} => Ok(to_binary(&get_version_info(deps.storage)?)?),
     }
+}
+
+#[entry_point]
+pub fn migrate(
+    deps: DepsMut<ProvenanceQuery>,
+    _env: Env,
+    msg: MigrateMsg,
+) -> Result<Response, ContractError> {
+    // If a previous version has been declared, it's important to ensure that the code that is being migrated
+    // is not an older version of the contract.  Otherwise, future migrations can be downgrades, which is not
+    // a desired state!  This check attempts to get the version info, but if none can be found due to an error,
+    // it is because no version info exists in storage in an older version.
+    if let Ok(version_info) = get_version_info(deps.storage) {
+        let stored_version = version_info.parse_sem_ver()?;
+        let current_version = VersionInfo::current_version().parse_sem_ver()?;
+        // This is why VersionInfo leverages the semver crate.  Contract versions can be declared in any fashion one
+        // would like, but keeping them in a semver structure allows the semver crate to read them and do comparisons
+        // to check if one version is greater than another.  This keeps the code very concise.
+        if stored_version >= current_version {
+            return Err(ContractError::InvalidVersion { explanation: format!("stored contract version {stored_version} is greater than or equal to the attempted migration version {current_version}. no migration necessary") });
+        }
+    }
+    // After verifying that the migration is to a new and higher version than previously-declared, it's safe to
+    // simply invoke the migrate function, which will establish in memory the new version declared in the
+    // migrating contract codebase.
+    let version_info = migrate_version_info(deps.storage)?;
+    // Similarly to how messages are appened in the increment_counter function, this declaration of a mutable
+    // vector will store attributes that denote when optional values in the MigrateMsg are encountered. They
+    // will be added to the response after all other migration tasks have been completed.
+    let mut attributes: Vec<Attribute> = vec![];
+    // Do an up-front check to see if any optional values are set.  If this becomes more complex, it may eventually
+    // make sense to migrate this logic directly into an impl for MigrateMsg.  However, MigrateMsg currently only
+    // contains two fields, so this if-statement is not currently logically cumbersome.
+    if msg.new_counter_value.is_some() || msg.increment_counter_fee.is_some() {
+        // Both optional values are requests for the contract State struct to be mutated, and it has been confirmed
+        // that at least one of them has been requested.  Due to this, preemptively loading the state at this point
+        // will never be pointless.
+        let mut contract_state = state(deps.storage);
+        let mut state = contract_state.load()?;
+        if let Some(new_counter_value) = msg.new_counter_value {
+            attributes.push(Attribute::new(
+                "modified_counter_value",
+                format!("{new_counter_value}"),
+            ));
+            state.contract_counter = Uint128::new(new_counter_value);
+        }
+        if let Some(increment_counter_fee) = msg.increment_counter_fee {
+            // Ensure that the newly-provided fee detail is valid. Otherwise, the migration endpoint
+            // would be a way to create an invalid state in the smart contract.
+            increment_counter_fee.self_validate(deps.api)?;
+            attributes.push(Attribute::new(
+                "modified_increment_counter_fee_address",
+                &increment_counter_fee.fee_collector_address,
+            ));
+            attributes.push(Attribute::new(
+                "modified_increment_counter_fee_amount",
+                increment_counter_fee.get_fee_amount_msg(),
+            ));
+            state.increment_counter_fee = Some(increment_counter_fee);
+        }
+        // After modifying the state with one or more optional values, it must be saved for the changes
+        // to be persisted into the contract's internal storage
+        contract_state.save(&state)?;
+    }
+    // Keep in mind: Attributes can be added to a Response for the migrate entry_point.  The entry_point
+    // can even be declared similarly to the execute entry_point, including a CosmosMsg<ProvenanceMsg> generic
+    // typing.  However, during a migration, any messages added to a Response will be completely ignored.
+    // The migrate entry_point is not suitable for actions that require executing transactions on the blockchain.
+    Ok(Response::new()
+        .add_attribute("action", "migrate")
+        .add_attribute("new_version", &version_info.version)
+        .add_attributes(attributes))
 }
 
 /// A function for standardizing the format for sub-names of the base contract name.
@@ -189,24 +270,61 @@ fn increment_counter(
     info: MessageInfo,
     increment_amount: Option<u128>,
 ) -> Result<Response<ProvenanceMsg>, ContractError> {
-    // Leverage the funds check to ensure that this free execution route does not receive funds at all
-    check_funds_are_empty(
-        info.funds,
-        "funds should not be provided when incrementing the counter",
-    )?;
+    let mut state_storage = state(deps.storage);
+    // Load the contract state in a mutable manner, allowing the internals to be modified in this execution route
+    let mut contract_state = state_storage.load()?;
+    // Establish a mutable vector of messages that will get appended to the response after all checks have been made
+    let mut messages: Vec<CosmosMsg<ProvenanceMsg>> = vec![];
+    if let Some(fee_detail) = &contract_state.increment_counter_fee {
+        // Before attempting to charge the fee, ensure that the sender sent the exact fee amount into the contract.
+        // If the user any number of coin definitions other than 1, then they either didn't provide any coin, or provided extra
+        // coin denominations that won't be detected by the contract.  Rejecting this prevents funds from being stuck in the contract.
+        // The second check to ensure that the funds sent are identical to the fee collection detail's amount ensures two things:
+        // 1: The sender sent enough coin,
+        // 2: The sender did not send too much coin.  Sending too much coin would cause the overage amount to be held in the contract's bank balances,
+        // which would essentially "steal" those funds from the sender.
+        if info.funds.len() != 1 || info.funds[0] != fee_detail.fee_collection_amount {
+            return Err(ContractError::InvalidFunds {
+                explanation: format!(
+                    "the charge to increment the counter is [{}]. found funds: {:?}",
+                    fee_detail.get_fee_amount_msg(),
+                    // Map out the funds to a more readable manner, ensuring that they can be printed in a format like "50nhash" as opposed to
+                    // the fully-expanded debug explanation for a Coin
+                    info.funds
+                        .iter()
+                        .map(|coin| format!("{}{}", coin.amount.u128(), coin.denom))
+                        .collect::<Vec<String>>(),
+                ),
+            });
+        }
+        // Append a bank send message that targets the fee collector specified in the fee detail, and
+        // sends the exact amount specified in the fee detail.  Due to the verification above, it is
+        // assured that this amount is the amount that the sender provided.  This will be a direct
+        // pass-through for the provided funds.
+        messages.push(CosmosMsg::Bank(BankMsg::Send {
+            to_address: fee_detail.fee_collector_address.clone(),
+            amount: vec![fee_detail.fee_collection_amount.clone()],
+        }));
+    } else {
+        // Leverage the funds check to ensure that this free execution route does not receive funds at all
+        check_funds_are_empty(
+            info.funds,
+            "funds should not be provided when incrementing the counter",
+        )?;
+    }
     // If the increment amount provided in the message was present, use it.
     // Otherwise, default to the standard increment amount of 1. This allows the user to
     // completely omit the value from the request payload and still get an increment.
     let amount_to_increment: Uint128 = increment_amount.unwrap_or(1).into();
-    let mut state_storage = state(deps.storage);
-    // Load the contract state in a mutable manner, allowing the internals to be modified in this execution route
-    let mut contract_state = state_storage.load()?;
     contract_state.contract_counter += amount_to_increment;
     // After incrementing the counter, it must be saved to the contract's internal state. This will persist
     // the value, and subsequent increments will see the new value. This will also be available and evident in
     // the query routes.
     state_storage.save(&contract_state)?;
     Ok(Response::new()
+        // Include the messages vector from above in the response. If no fee is required by the contract, this vector
+        // will be empty, which is completely fine and will not cause errors
+        .add_messages(messages)
         .add_attribute("action", "execute_increment_counter")
         .add_attribute(
             "new_counter_value",
@@ -333,6 +451,11 @@ mod tests {
     use provwasm_std::{AttributeMsgParams, NameMsgParams, ProvenanceMsgParams};
     use serde_json_wasm::to_string;
 
+    use crate::{
+        types::FeeCollectionDetail,
+        version_info::{get_version_info, set_version_info, CONTRACT_NAME, CONTRACT_VERSION},
+    };
+
     use super::*;
 
     // Testing all routes defined in a smart contract is incredibly important!  It can prevent unexpected bugs
@@ -358,6 +481,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: Some(150),
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully when all arguments are as expected");
@@ -433,6 +557,24 @@ mod tests {
             state.contract_counter.u128(),
             "expected the contract counter to be properly set when provided",
         );
+        assert!(
+            state.increment_counter_fee.is_none(),
+            "omitting a counter fee should result in no value being stored to state"
+        );
+        // Instantiation should also establish the default version info. This is used by deriving the
+        // declared contract name and version in the Cargo.toml file
+        let version_info = get_version_info(deps.as_ref().storage)
+            .expect("version info should be set after instantiation");
+        assert_eq!(
+            env!("CARGO_CRATE_NAME"),
+            version_info.contract,
+            "expected the contract name to be set with the default cargo crate name declaration"
+        );
+        assert_eq!(
+            env!("CARGO_PKG_VERSION"),
+            version_info.version,
+            "expected the contract version to be set with the default cargo package version declaration",
+        );
     }
 
     // This test ensures that when the user omits the starting counter value during instantiation that
@@ -447,6 +589,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should succeed when arguments are properly supplied, even without a starting_counter value");
@@ -457,6 +600,43 @@ mod tests {
             0,
             state.contract_counter.u128(),
             "the counter value should be set to the default value of zero when no value is provided",
+        );
+    }
+
+    #[test]
+    fn test_instantiation_provided_fee_detail() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: Some(FeeCollectionDetail {
+                    fee_collector_address: "fee-collector".to_string(),
+                    fee_collection_amount: coin(100, "nhash"),
+                }),
+            },
+        )
+        .expect("expected instantiation to succeed");
+        let fee_detail = state_read(deps.as_ref().storage)
+            .load()
+            .expect("expected the contract state to be created by instantiation")
+            .increment_counter_fee
+            .expect("a provided fee collection detail to instantiation should result in a saved value in state");
+        assert_eq!(
+            "fee-collector", fee_detail.fee_collector_address,
+            "expected the fee_collector_address of the fee detail to match the provided argument"
+        );
+        assert_eq!(
+            100,
+            fee_detail.fee_collection_amount.amount.u128(),
+            "expected the fee_collection_amount's amount value to match the provided argument",
+        );
+        assert_eq!(
+            "nhash", fee_detail.fee_collection_amount.denom,
+            "expected the fee_collection_amount's denom value to match the provided argument",
         );
     }
 
@@ -472,6 +652,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .unwrap_err();
@@ -480,6 +661,35 @@ mod tests {
             "expected provided nhash funds to cause an InvalidFunds ContractError, but got error: {:?}",
             error,
         );
+        // Verify that an invalid fee collector detail triggers an error
+        let error = instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: Some(FeeCollectionDetail {
+                    fee_collector_address: "fee-collector".to_string(),
+                    fee_collection_amount: Coin {
+                        // A fee collection amount with zero as its chosen amount should be rejected with an error
+                        amount: Uint128::zero(),
+                        denom: "nhash".to_string(),
+                    },
+                }),
+            },
+        )
+        .unwrap_err();
+        match error {
+            ContractError::GenericError(message) => {
+                assert_eq!(
+                    "fee collection amount must be greater than zero",
+                    message,
+                    "unexpected generic error message encountered during invalid fee detail check",
+                );
+            },
+            _ => panic!("unexpected error encountered when passing invalid amount value to fee detail: {:?}", error),
+        }
     }
 
     // This test showcases a round-trip through the contract.  It runs an execution route to
@@ -496,6 +706,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: Some(1),
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully");
@@ -556,6 +767,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully");
@@ -578,7 +790,7 @@ mod tests {
     }
 
     #[test]
-    fn test_increment_counter_failures() {
+    fn test_increment_counter_with_fee_charge() {
         let mut deps = mock_dependencies(&[]);
         instantiate(
             deps.as_mut(),
@@ -587,6 +799,70 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: Some(FeeCollectionDetail {
+                    fee_collector_address: "fee-collector".to_string(),
+                    fee_collection_amount: coin(100, "nhash"),
+                }),
+            },
+        )
+        .expect("expected instantiation to succeed");
+        let response = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("example_sender", &[coin(100, "nhash")]),
+            ExecuteMsg::IncrementCounter {
+                increment_amount: None,
+            },
+        )
+        .expect(
+            "expected the correct fee amount provided to increment counter to execute successfully",
+        );
+        assert_eq!(
+            1,
+            response.messages.len(),
+            "expected a single message to be returned when a fee is required for incrementing the counter",
+        );
+        match &response.messages.first().unwrap().msg {
+            CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
+                assert_eq!(
+                    "fee-collector",
+                    to_address,
+                    "expected the to_address value to equate to the amount provided during instantiation",
+                );
+                assert_eq!(
+                    1,
+                    amount.len(),
+                    "expected only a single coin to be sent in the bank send",
+                );
+                let coin = amount.first().unwrap();
+                assert_eq!(
+                    100,
+                    coin.amount.u128(),
+                    "expected the amount sent to equate to the amount provided during instantiation",
+                );
+                assert_eq!(
+                    "nhash", coin.denom,
+                    "expected the denom sent to equate to the amount provided during instantiation",
+                );
+            }
+            msg => panic!(
+                "unexpected message sent after fee charge for increment: {:?}",
+                msg
+            ),
+        };
+    }
+
+    #[test]
+    fn test_increment_counter_failures_no_fee_charge() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully");
@@ -606,6 +882,75 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_increment_counter_failures_with_fee_charge() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: Some(FeeCollectionDetail {
+                    fee_collector_address: "fee-collector".to_string(),
+                    fee_collection_amount: coin(100, "nhash"),
+                }),
+            },
+        )
+        .expect("expected instantiation to succeed");
+        // Declare a re-usable closure to test the same scenario with multiple different inputs
+        let mut test_invalid_funds =
+            |funds: &[Coin], test_reason: &str, expected_error_text: &str| {
+                let error = execute(
+                    deps.as_mut(),
+                    mock_env(),
+                    mock_info("admin", funds),
+                    ExecuteMsg::IncrementCounter {
+                        increment_amount: None,
+                    },
+                )
+                .unwrap_err();
+                match error {
+                    ContractError::InvalidFunds { explanation } => {
+                        // Ensure the proper error text is being produced to ensure the end user will receive an understandable
+                        // message upon executing the contract incorrectly when fees are needed
+                        assert_eq!(
+                            expected_error_text, explanation,
+                            "{}: unexpected InvalidFunds error message encountered",
+                            test_reason,
+                        );
+                    }
+                    _ => panic!("{}: unexpected error encountered: {:?}", test_reason, error),
+                }
+            };
+        test_invalid_funds(
+            &[],
+            "no funds provided",
+            "the charge to increment the counter is [100nhash]. found funds: []",
+        );
+        test_invalid_funds(
+            &[coin(99, "nhash")],
+            "too few funds provided",
+            "the charge to increment the counter is [100nhash]. found funds: [\"99nhash\"]",
+        );
+        test_invalid_funds(
+            &[coin(101, "nhash")],
+            "too many funds provided",
+            "the charge to increment the counter is [100nhash]. found funds: [\"101nhash\"]",
+        );
+        test_invalid_funds(
+            &[coin(100, "fakecoin")],
+            "incorrect funds type provided",
+            "the charge to increment the counter is [100nhash]. found funds: [\"100fakecoin\"]",
+        );
+        test_invalid_funds(
+            &[coin(100, "nhash"), coin(1, "otherthing")],
+            "too many coin types provided",
+            "the charge to increment the counter is [100nhash]. found funds: [\"100nhash\", \"1otherthing\"]",
+        );
+    }
+
     // This test showcases how to use provwasm's MockQuerier (encapsulated within the response from mock_dependencies())
     // to mock out responses from the Provenance Attribute module.  Although this test only uses the attribute mock functionality,
     // there are also mocks for the other modules that provwasm covers (like the name module).
@@ -619,6 +964,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully");
@@ -760,6 +1106,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully");
@@ -814,6 +1161,7 @@ mod tests {
             InitMsg {
                 contract_base_name: "test.pio".to_string(),
                 starting_counter: None,
+                increment_counter_fee: None,
             },
         )
         .expect("instantiation should complete successfully");
@@ -876,6 +1224,316 @@ mod tests {
                 .iter()
                 .any(|attr| attr.key == "recipient_address" && attr.value == "recipient"),
             "expected the recipient_address attribute to include the proper value",
+        );
+    }
+
+    #[test]
+    fn test_migrate_all_changes_no_version_info() {
+        let mut deps = mock_dependencies(&[]);
+        // This test skips instantiation because it is simulating a previous version of the contract never had version info
+        // A proper instantiation will bind a name (which is ignored in the test suite, so we can skip that), and will
+        // create a state.  To simulate this situation, let's create a state value by itself
+        state(deps.as_mut().storage)
+            .save(&State {
+                contract_base_name: "test.pio".to_string(),
+                // Simulate a counter that has been incremented a few times
+                contract_counter: Uint128::new(10),
+                // A previous contract would not have this Option value, so set it to None to start with
+                increment_counter_fee: None,
+            })
+            .expect("state save should succeed");
+        let migration_fee_detail = FeeCollectionDetail {
+            fee_collector_address: "fee-collector".to_string(),
+            fee_collection_amount: coin(10, "nhash"),
+        };
+        let response = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                new_counter_value: Some(3),
+                increment_counter_fee: Some(migration_fee_detail.clone()),
+            },
+        )
+        .expect("migration should execute successfully");
+        assert!(
+            response.messages.is_empty(),
+            "a migration response should never contain messages"
+        );
+        assert_eq!(
+            5,
+            response.attributes.len(),
+            "all five of the possible attributes should be added to the response",
+        );
+        assert!(
+            response
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "action" && attr.value == "migrate"),
+            "the action attribute should have the correct value",
+        );
+        assert!(
+            response
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "new_version" && attr.value == CONTRACT_VERSION),
+            "the new_version attribute should have the correct value",
+        );
+        assert!(
+            response
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "modified_counter_value" && attr.value == "3"),
+            "the modified_counter_value attribute should have the correct value",
+        );
+        assert!(
+            response
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "modified_increment_counter_fee_address"
+                    && attr.value == "fee-collector"),
+            "the modfied_increment_counter_fee_address attribute should have the correct value",
+        );
+        assert!(
+            response
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "modified_increment_counter_fee_amount"
+                    && attr.value == "10nhash"),
+            "the modified_increment_counter_fee_amount attribute should have the correct value",
+        );
+        let version_info = get_version_info(deps.as_ref().storage)
+            .expect("version info should load after the migration creates it");
+        assert_eq!(
+            CONTRACT_NAME, version_info.contract,
+            "the migration should set the version info's contract name to the contract env value",
+        );
+        assert_eq!(
+            CONTRACT_VERSION, version_info.version,
+            "the migration should set the version info's contract name to the contract env value",
+        );
+        let state = state_read(deps.as_ref().storage)
+            .load()
+            .expect("state should load after a migration");
+        assert_eq!(
+            3,
+            state.contract_counter.u128(),
+            "the contract counter value should be correctly reset to 3 after the migration",
+        );
+        let fee_detail = state
+            .increment_counter_fee
+            .expect("the counter fee should be set in the state after the migration");
+        assert_eq!(
+            migration_fee_detail, fee_detail,
+            "the state's fee detail should equate directly to the value used in the migration"
+        );
+    }
+
+    #[test]
+    fn test_migration_from_older_version() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: None,
+            },
+        )
+        .expect("instantiation should succeed");
+        // The contract's name and version are only changed by modifications to the Cargo.toml file.
+        // This manual adjustment ensures that whatever version the contract currently is coded to be
+        // in that file will be larger than this value, ensuring that the migration will not be rejected
+        // for having too low a version
+        set_version_info(
+            deps.as_mut().storage,
+            &VersionInfo {
+                contract: CONTRACT_NAME.to_string(),
+                version: "0.0.0".to_string(),
+            },
+        )
+        .expect("version info change should succeed");
+        let response = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                new_counter_value: Some(150),
+                increment_counter_fee: Some(FeeCollectionDetail {
+                    fee_collector_address: "fee-collector".to_string(),
+                    fee_collection_amount: coin(1234, "bitcoin"),
+                }),
+            },
+        )
+        .expect("the migration should succeed");
+        assert!(
+            response.messages.is_empty(),
+            "a migration response should never contain messages"
+        );
+        assert_eq!(
+            5,
+            response.attributes.len(),
+            "all five attributes should be contained in the migration"
+        );
+        let version_info = get_version_info(deps.as_ref().storage)
+            .expect("version info should be fetched successfully");
+        assert_eq!(CONTRACT_VERSION, version_info.version, "the contract version should be successfully reset to the proper value after the migration");
+    }
+
+    #[test]
+    fn test_migration_with_no_optional_values() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: None,
+            },
+        )
+        .expect("instantiation should succeed");
+        // The contract's name and version are only changed by modifications to the Cargo.toml file.
+        // This manual adjustment ensures that whatever version the contract currently is coded to be
+        // in that file will be larger than this value, ensuring that the migration will not be rejected
+        // for having too low a version
+        set_version_info(
+            deps.as_mut().storage,
+            &VersionInfo {
+                contract: CONTRACT_NAME.to_string(),
+                version: "0.0.0".to_string(),
+            },
+        )
+        .expect("version info change should succeed");
+        let response = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                new_counter_value: None,
+                increment_counter_fee: None,
+            },
+        )
+        .expect("a migration with no optional values should succeed");
+        assert!(
+            response.messages.is_empty(),
+            "a migration response should never contain messages"
+        );
+        assert_eq!(
+            2,
+            response.attributes.len(),
+            "only the two standard attributes should be included in the response"
+        );
+        assert!(
+            response.attributes.iter().any(|attr| attr.key == "action"),
+            "the action attribute should be present in the response",
+        );
+        assert!(
+            response
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "new_version"),
+            "the new_version attribute should be present in the respons",
+        );
+    }
+
+    #[test]
+    fn test_migration_failures() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: None,
+            },
+        )
+        .expect("instantiation should succeed");
+        // Test that a migration to the same version fails.
+        // Simply instantiating the contract to set the version info and then trying to migrate should achieve this
+        let error = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                new_counter_value: None,
+                increment_counter_fee: None,
+            },
+        )
+        .unwrap_err();
+        match error {
+            ContractError::InvalidVersion { explanation } => {
+                assert_eq!(
+                    format!("stored contract version {} is greater than or equal to the attempted migration version {}. no migration necessary", CONTRACT_VERSION, CONTRACT_VERSION),
+                    explanation,
+                    "expected the correct InvalidVersion explanation",
+                );
+            }
+            _ => panic!(
+                "unexpected error encountered when migrating to a matching version: {:?}",
+                error
+            ),
+        }
+        // Test that a migration to a lower version fails.
+        // Set the contract version to an absurdly-high value to achieve this beforehand
+        set_version_info(
+            deps.as_mut().storage,
+            &VersionInfo {
+                contract: CONTRACT_NAME.to_string(),
+                version: "999.9.9".to_string(),
+            },
+        )
+        .expect("setting the contract version should succeed");
+        let error = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                new_counter_value: None,
+                increment_counter_fee: None,
+            },
+        )
+        .unwrap_err();
+        match error {
+            ContractError::InvalidVersion { explanation } => {
+                assert_eq!(
+                    format!("stored contract version 999.9.9 is greater than or equal to the attempted migration version {}. no migration necessary", CONTRACT_VERSION),
+                    explanation,
+                    "expected the correct InvalidVersion explanation",
+                );
+            }
+            _ => panic!(
+                "unexpected error encountered when migrating to a matching version: {:?}",
+                error
+            ),
+        }
+    }
+
+    #[test]
+    fn test_query_version() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("admin", &[]),
+            InitMsg {
+                contract_base_name: "test.pio".to_string(),
+                starting_counter: None,
+                increment_counter_fee: None,
+            },
+        )
+        .expect("instantiation should succeed");
+        let version_info_binary = query(deps.as_ref(), mock_env(), QueryMsg::QueryVersion {})
+            .expect("version info query should succeed after an instantiation");
+        let version_info = from_binary::<VersionInfo>(&version_info_binary)
+            .expect("the query result should deserialize to a VersionInfo struct");
+        assert_eq!(
+            CONTRACT_NAME, version_info.contract,
+            "instantiation should set the correct contract name",
+        );
+        assert_eq!(
+            CONTRACT_VERSION, version_info.version,
+            "instantiation should set the correct contract version",
         );
     }
 }

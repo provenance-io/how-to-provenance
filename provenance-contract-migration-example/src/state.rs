@@ -3,6 +3,8 @@ use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::types::FeeCollectionDetail;
+
 // Each value saved into cosmwasm standard storage must have a byte array as its key.
 // Cosmwasm Docs: https://docs.cosmwasm.com/dev-academy/develop-smart-contract/intro/
 // Their tutorial also goes over using cosmwasm storage plus's Item struct, which is
@@ -22,6 +24,7 @@ pub struct State {
     /// IncrementCounter execution route, and will be used to demonstrate mutating the
     /// internal contract storage.
     pub contract_counter: Uint128,
+    pub increment_counter_fee: Option<FeeCollectionDetail>,
 }
 
 /// This function loads the state in a mutable manner, taking a mutable reference to the

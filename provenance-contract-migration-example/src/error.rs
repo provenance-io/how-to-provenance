@@ -18,8 +18,16 @@ pub enum ContractError {
     #[error("Invalid funds were provided: {explanation}")]
     InvalidFunds { explanation: String },
 
+    #[error("Invalid contract version: {explanation}")]
+    InvalidVersion { explanation: String },
+
     #[error("Expected the name {name} to not exist, but it was already bound to address {owner_address}")]
     NameAlreadyExists { name: String, owner_address: String },
+
+    // Ensure that the ContractError can be derived directly from a semver Error.
+    // This will allow the ? operator to magically up-shift cosmwasm errors into ContractError.
+    #[error("{0}")]
+    SemVerError(#[from] semver::Error),
 
     // Ensure that the ContractError can be derived directly from a cosmwasm_std StdError.
     // This will allow the ? operator to magically up-shift cosmwasm errors into ContractError.
