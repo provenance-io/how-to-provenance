@@ -1,1 +1,1 @@
-# HD Wallet Example
+# HD Wallet Example (Hierarchical Deterministic Wallets)
