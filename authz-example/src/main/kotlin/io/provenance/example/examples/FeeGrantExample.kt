@@ -12,10 +12,10 @@ import io.provenance.example.util.DefaultParam
 import io.provenance.example.util.InputParams
 import io.provenance.example.util.InputUtil.input
 import io.provenance.example.util.InputUtil.inputString
+import io.provenance.example.util.InputValidation
 import io.provenance.example.util.PbClientUtil
 import io.provenance.example.util.WalletSignerUtil
 import io.provenance.example.util.executeTx
-import io.provenance.example.util.isAlphaOnly
 import io.provenance.example.util.queryBalance
 import io.provenance.example.util.resolveName
 import io.provenance.name.v1.MsgBindNameRequest
@@ -112,14 +112,20 @@ object FeeGrantExample : ExampleSuite {
         val childName = inputString(
             message = "$inputPrefix Enter a name to bind (alpha characters only)",
             params = InputParams(
-                validation = { namePrefix -> namePrefix.isAlphaOnly() },
+                validation = InputValidation(
+                    validate = { namePrefix -> namePrefix.all { it.isLetter() } },
+                    validationRuleText = listOf("Input must be alphabetical characters only")
+                ),
                 default = DefaultParam("testname"),
             ),
         )
         val parentName = inputString(
             message = "$inputPrefix Enter the existing parent name to bind to (unrestricted)",
             params = InputParams(
-                validation = { nameSuffix -> nameSuffix.isAlphaOnly() },
+                validation = InputValidation(
+                    validate = { namePrefix -> namePrefix.all { it.isLetter() } },
+                    validationRuleText = listOf("Input must be alphabetical characters only")
+                ),
                 // The name "pio" is created unrestricted on local instances.  If using testnet or another instance,
                 // be sure to use an unrestricted name, or execution will fail when attempting to find the parent address
                 // owner of the restricted name as a signer

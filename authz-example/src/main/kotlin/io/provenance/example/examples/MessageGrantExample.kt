@@ -2,43 +2,99 @@ package io.provenance.example.examples
 
 import cosmos.authz.v1beta1.Authz.GenericAuthorization
 import cosmos.authz.v1beta1.Authz.Grant
-import cosmos.authz.v1beta1.Tx.MsgExec
 import cosmos.authz.v1beta1.Tx.MsgGrant
 import cosmos.authz.v1beta1.Tx.MsgRevoke
-import cosmos.bank.v1beta1.Tx.MsgSend
 import io.provenance.client.grpc.PbClient
 import io.provenance.client.protobuf.extensions.toAny
 import io.provenance.client.wallet.WalletSigner
-import io.provenance.example.util.DefaultParam
-import io.provenance.example.util.InputParams
-import io.provenance.example.util.InputUtil.input
-import io.provenance.example.util.PbClientType
 import io.provenance.example.util.PbClientUtil
-import io.provenance.example.util.ProtoBuilderUtil.coin
 import io.provenance.example.util.WalletSignerUtil
 import io.provenance.example.util.executeTx
-import io.provenance.example.util.queryBalance
+import io.provenance.metadata.v1.Description
+import io.provenance.metadata.v1.MsgWriteScopeSpecificationRequest
+import io.provenance.metadata.v1.PartyType
+import io.provenance.metadata.v1.ScopeSpecification
+import io.provenance.metadata.v1.ScopeSpecificationRequest
 import io.provenance.scope.util.toProtoTimestamp
 import java.time.OffsetDateTime
+import java.util.UUID
 
+/**
+ * This example showcases how to use the authz module to grant privileges to modify ownership of a metadata module
+ * object from the owner account (helper account) to another account (main account).  It does the following:
+ * - Creates a scope specification owned by the helper account.
+ * - Grants the main account authz privileges to execute MsgWriteScopeSpecificationRequest transactions on behalf of the helper account.
+ * - Alters the ownership of the scope specification to the main account using only the main account's signature.
+ * - Revokes the authz message grant from the main account as a cleanup step after all authz actions are completed.
+ */
 object MessageGrantExample : ExampleSuite {
     override fun start() {
-        val pbClient = PbClientUtil.newClient(clientType = PbClientType.LOCAL)
-        val mainAccount = WalletSignerUtil.newSigner("[Main Account]", mnemonic = "develop cycle wedding text knock approve arm flame grace razor armor buyer fringe idle knock spell check hockey stamp vivid sail food ordinary maid")
+        val pbClient = PbClientUtil.newClient()
+        val mainAccount = WalletSignerUtil.newSigner("[Main Account]")
         println("Main account established with address [${mainAccount.address()}]")
-        val helperAccount = WalletSignerUtil.newSigner("[Helper Account]", mnemonic = "earn attend jar milk open poverty inject park flock face bonus check climb illness test emerge giraffe weather castle shoot robust try creek pause")
+        val helperAccount = WalletSignerUtil.newSigner("[Helper Account]")
         println("Helper account established with address [${helperAccount.address()}]")
+        // First, create a scope specification owned by the helper account
+        val scopeSpecUuid = createScopeSpecification(pbClient, helperAccount)
+        // Second, grant the main account authz privileges to run MsgWriteScopeSpecificationRequest messages on behalf
+        // of the helper account
         grantMessageExecuteToMainAccount(pbClient, mainAccount, helperAccount)
-        sendFundsFromHelperToMain(pbClient, mainAccount, helperAccount)
-        revokeMsgSendGrantToMainAccount(pbClient, mainAccount, helperAccount)
+        // Third, have the main account take ownership of the scope specification by re-writing it with itself as the
+        // owner, and signing without any intervention from the helper account
+        writeScopeSpecOwnerToMainAccount(scopeSpecUuid, pbClient, mainAccount, helperAccount)
+        // Finally, revoke MsgWriteScopeSpecificationRequest authz privileges from the main account via the helper
+        // account as a cleanup step
+        revokeGrantToMainAccount(pbClient, mainAccount, helperAccount)
     }
-    
+
+    /**
+     * A simple demonstration of the creation of a scope specification.  This, alone, does relatively nothing in the
+     * provenance ecosystem.  However, it does create a metadata object owned solely by the helper account.  This
+     * ownership cannot be changed without either including the helper account as a signer, or by using authz to
+     * delegate those permissions to another account.
+     */
+    private fun createScopeSpecification(
+        pbClient: PbClient,
+        helperAccount: WalletSigner,
+    ): UUID = UUID.randomUUID().also { scopeSpecUuid ->
+        println("Writing new scope spec with uuid [${helperAccount.address()}] to be owned by helper account [${helperAccount.address()}]")
+        try {
+            pbClient.executeTx(
+                signer = helperAccount,
+                transaction = MsgWriteScopeSpecificationRequest
+                    .newBuilder()
+                    .addSigners(helperAccount.address())
+                    .setSpecUuid(scopeSpecUuid.toString())
+                    .setSpecification(
+                        ScopeSpecification
+                            .newBuilder()
+                            .setDescription(
+                                Description.newBuilder()
+                                    .setName("fake-scope-spec")
+                                    .setDescription("a fake scope specification")
+                            )
+                            .addOwnerAddresses(helperAccount.address())
+                            .addPartiesInvolved(PartyType.PARTY_TYPE_OWNER)
+                    )
+                    .build(),
+            )
+            println("Successfully created scope specification with uuid [$scopeSpecUuid] owned by [${helperAccount.address()}]")
+        } catch (e: Exception) {
+            println("Failed to create scope spec for helper account [${helperAccount.address()}]")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * This function uses authz to authorize the main account to execute MsgWriteScopeSpecificationRequests on behalf
+     * of the helper account.
+     */
     private fun grantMessageExecuteToMainAccount(
         pbClient: PbClient,
         mainAccount: WalletSigner,
         helperAccount: WalletSigner,
     ) {
-        println("Granting MsgSend authority to [${mainAccount.address()}] from [${helperAccount.address()}]")
+        println("Granting MsgWriteScopeSpecificationRequest authority to [${mainAccount.address()}] from [${helperAccount.address()}]")
         try {
             pbClient.executeTx(
                 signer = helperAccount,
@@ -46,17 +102,14 @@ object MessageGrantExample : ExampleSuite {
                     .setGrant(
                         Grant
                             .newBuilder()
-                            // All Provenance authorization types are found at: https://github.com/provenance-io/provenance/blob/main/third_party/proto/cosmos/authz/v1beta1/authz.proto
+                            // Provenance consumes GenericAuthorization here: https://github.com/provenance-io/provenance/blob/main/third_party/proto/cosmos/authz/v1beta1/authz.proto
                             // A generic authorization can wrap any message type and dynamically grant access, if authz
-                            // is enabled for that particular message type.  This authorization could also be achieved
-                            // by directly using the proper authorization message. For MsgSend, the message would be a
-                            // SendAuthorization: https://github.com/cosmos/cosmos-sdk/blob/master/proto/cosmos/bank/v1beta1/authz.proto
-                            // The upside to adding authorizations via direct specification is that a spend limit could
-                            // also be appended if using that approach.
+                            // is enabled for that particular message type.  Provenance leverages authz for message-type
+                            // grants in order to allow metadata changes
                             .setAuthorization(
                                 GenericAuthorization
                                     .newBuilder()
-                                    .setMsg("/${MsgSend.getDescriptor().fullName}")
+                                    .setMsg("/${MsgWriteScopeSpecificationRequest.getDescriptor().fullName}")
                                     .build()
                                     .toAny()
                             )
@@ -66,101 +119,94 @@ object MessageGrantExample : ExampleSuite {
                             .setExpiration(OffsetDateTime.now().plusDays(1).toProtoTimestamp())
                             .build()
                     )
-                    // Grant this MsgSend access to the main account
+                    // Grant this MsgWriteScopeSpecificationRequest access to the main account
                     .setGrantee(mainAccount.address())
-                    // Grant MsgSends on behalf of the helper account
+                    // Grant MsgWriteScopeSpecificationRequest on behalf of the helper account
                     .setGranter(helperAccount.address())
                     .build()
             )
-            println("Successfully granted MsgSend authority to [${mainAccount.address()}]")
+            println("Successfully granted MsgWriteScopeSpecificationRequest authority to [${mainAccount.address()}]")
         } catch (e: Exception) {
-            println("Failed to grant MsgSend authority to [${mainAccount.address()}] from [${helperAccount.address()}]")
+            println("Failed to grant MsgWriteScopeSpecificationRequest authority to [${mainAccount.address()}] from [${helperAccount.address()}]")
             e.printStackTrace()
         }
     }
 
-    private fun sendFundsFromHelperToMain(
+    /**
+     * This function uses the main account's new authz permissions to change the owner of the previously-created scope
+     * specification from the helper account to the main account.  By way of authz grant, the main account will be able
+     * to sign a message alone that achieves this.  Without the authz grant, this function would fail.  To demonstrate
+     * this, comment out the usage of grantMessageExecuteToMainAccount() in the start() function.
+     */
+    private fun writeScopeSpecOwnerToMainAccount(
+        scopeSpecUuid: UUID,
         pbClient: PbClient,
         mainAccount: WalletSigner,
         helperAccount: WalletSigner,
     ) {
-        val mainBalanceBeforeTransfer = pbClient.queryBalance(mainAccount.address(), "nhash")
-        val helperBalanceBeforeTransfer = pbClient.queryBalance(helperAccount.address(), "nhash")
-        println("Main Account Balance: ${mainBalanceBeforeTransfer}nhash | Helper Account Balance: ${helperBalanceBeforeTransfer}nhash")
-        // Prompt how much nhash to take from helperAccount to send to mainAccount. Default to 100nhash for a fairly
-        // low-impact transfer
-        val amountToSend = input(
-            message = "Amount of nhash to send [${mainAccount.address()}] from [${helperAccount.address()}] (Max: ${helperBalanceBeforeTransfer}nhash)",
-            params = InputParams(
-                // Don't let the default ever breach the amount of nhash the helper account has
-                default = DefaultParam(100L.coerceAtMost(helperBalanceBeforeTransfer)),
-                // Don't accept input if it attempts to send more than the amount of nhash the helper account has
-                validation = { amountToSend -> amountToSend <= helperBalanceBeforeTransfer },
-            ),
-            converter = { it.toLongOrNull() },
-        )
         try {
-            println("Sending ${amountToSend}nhash from [${helperAccount.address()}] to [${mainAccount.address()}]")
+            println("Re-writing scope specification with uuid [$scopeSpecUuid] to swap owner from helper account [${helperAccount.address()}] to main account [${mainAccount.address()}]")
             pbClient.executeTx(
                 signer = mainAccount,
-                // Important: In order to do actions that would normally not be possible, like a MsgSend that transfers
-                // funds from the helperAccount to the mainAccount while only having the mainAccount sign, the transaction
-                // message must be wrapped in a MsgExec, which lets the server know that the request will be using
-                // authz permissions to perform the action.
-                transaction = MsgExec
+                transaction = MsgWriteScopeSpecificationRequest
                     .newBuilder()
-                    // Establish the grantee as the mainAccount, denoting that it will perform actions authorized by
-                    // the authz module
-                    .setGrantee(mainAccount.address())
-                    .addMsgs(
-                        MsgSend.newBuilder()
-                            // Transfer the specified amount of nhash from input
-                            .addAmount(coin(amountToSend, "nhash"))
-                            // Set the helperAccount as the sender.  This would normally require that the helperAccount
-                            // is specified as the signer, but authz is helping this not be necessary because the
-                            // helperAccount granted the mainAccount authorization to do this
-                            .setFromAddress(helperAccount.address())
-                            // Set the mainAccount as the receiving address for the transfer
-                            .setToAddress(mainAccount.address())
-                            .build()
-                            .toAny()
+                    // Although the helperAccount owns the scope specification, the authz grant will allow the
+                    // mainAccount to take ownership without a signature from the scope spec owner.  This would be
+                    // rejected without the grant because the helperAccount would be required as a signer.
+                    .addSigners(mainAccount.address())
+                    .setSpecUuid(scopeSpecUuid.toString())
+                    .setSpecification(
+                        ScopeSpecification
+                            .newBuilder()
+                            .setDescription(
+                                Description.newBuilder()
+                                    .setName("fake-scope-spec")
+                                    .setDescription("a fake scope specification")
+                            )
+                            .addOwnerAddresses(mainAccount.address())
+                            .addPartiesInvolved(PartyType.PARTY_TYPE_OWNER)
                     )
                     .build(),
             )
-            println("Successfully executed transaction to send ${amountToSend}nhash from [${helperAccount.address()}] to [${mainAccount.address()}]")
-            val mainBalanceAfterTransfer = pbClient.queryBalance(mainAccount.address(), "nhash")
-            val helperBalanceAfterTransfer = pbClient.queryBalance(helperAccount.address(), "nhash")
-            println("Main Account Balance: ${mainBalanceAfterTransfer}nhash | Helper Account Balance: ${helperBalanceAfterTransfer}nhash")
-            // The helper did not spend any gas fees for the transaction because the main account was the signer.
-            // This allows this check to determine if the helper's balance was directly reduced by the sent amount
-            check(helperBalanceBeforeTransfer - helperBalanceAfterTransfer == amountToSend) {
-                "Expected ${amountToSend}nhash to be sent from the helper account [${helperAccount.address()}] to the main account [${mainAccount.address()}]"
+            println("Successfully executed transaction to set the main account [${mainAccount.address()}] as the owner of the scope spec [$scopeSpecUuid]")
+            // Query up the scope specification to fully verify that the changes have been recorded on the blockchain.
+            val scopeSpec = pbClient.metadataClient.scopeSpecification(
+                ScopeSpecificationRequest.newBuilder().setSpecificationId(scopeSpecUuid.toString()).build()
+            ).scopeSpecification.specification
+            check(scopeSpec.ownerAddressesList.size == 1 && mainAccount.address() in scopeSpec.ownerAddressesList) {
+                "Expected only one owner to be listed on scope [$scopeSpecUuid] and for the owner to be the main account [${mainAccount.address()}]. " +
+                        "Instead, found owner addresses: ${scopeSpec.ownerAddressesList}"
             }
-            println("Successfully sent ${amountToSend}nhash from [${helperAccount.address()}] to [${mainAccount.address()}]")
+            println("Success! Scope specification [$scopeSpecUuid] is now solely owned by the main account [${mainAccount.address()}]")
         } catch (e: Exception) {
-            println("Failed to send ${amountToSend}nhash from [${helperAccount.address()}] to [${mainAccount.address()}]")
+            println("Failed to set main account [${mainAccount.address()}] as the owner of scope spec [$scopeSpecUuid]")
             e.printStackTrace()
         }
     }
 
-    private fun revokeMsgSendGrantToMainAccount(
+    /**
+     * A simple cleanup step that showcases how to revoke an authz grant for a message type.  Revokes the
+     * MsgWriteScopeSpecificationRequest authorization granted during the execution of the
+     * grantMessageExecuteToMainAccount() function.
+     */
+    private fun revokeGrantToMainAccount(
         pbClient: PbClient,
         mainAccount: WalletSigner,
         helperAccount: WalletSigner,
     ) {
-        println("Revoking MsgSend grant from [${helperAccount.address()}] to [${mainAccount.address()}]")
+        println("Revoking MsgWriteScopeSpecificationRequest grant from [${helperAccount.address()}] to [${mainAccount.address()}]")
         try {
             pbClient.executeTx(
                 signer = helperAccount,
                 transaction = MsgRevoke.newBuilder()
                     .setGrantee(mainAccount.address())
                     .setGranter(helperAccount.address())
-                    .setMsgTypeUrl("/${MsgSend.getDescriptor().fullName}")
+                    .setMsgTypeUrl("/${MsgWriteScopeSpecificationRequest.getDescriptor().fullName}")
                     .build(),
             )
-            println("Successfully revoked MsgSend authorization from [${helperAccount.address()}] to [${mainAccount.address()}]")
+            println("Successfully revoked MsgWriteScopeSpecificationRequest authorization from [${helperAccount.address()}] to [${mainAccount.address()}]")
         } catch (e: Exception) {
-            println("Failed to revoke MsgSend authorization!")
+            println("Failed to revoke MsgWriteScopeSpecificationRequest authorization!")
             e.printStackTrace()
         }
     }
