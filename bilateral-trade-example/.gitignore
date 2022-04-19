@@ -1,0 +1,6 @@
+# ide
+.idea
+
+# build artifacts
+artifacts
+target
