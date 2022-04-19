@@ -1,0 +1,16 @@
+[versions]
+bouncyCastle = "1.70"
+kotlin = "1.6.10"
+provenanceHdWallet = "0.1.15"
+
+[libraries]
+bouncyCastleBcProv = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncyCastle" }
+kotlinAllOpen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
+kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlinStdLibJdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
+provenanceHdWallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "provenanceHdWallet" }
+
+[bundles]
+bouncyCastle = ["bouncyCastleBcProv"]
+kotlin = ["kotlinAllOpen", "kotlinReflect", "kotlinStdLibJdk8"]
+provenance = ["provenanceHdWallet"]
