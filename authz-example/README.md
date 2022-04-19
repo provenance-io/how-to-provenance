@@ -68,7 +68,7 @@ echo "Helper account mnemonic: $helper_account_mnemonic"
 # Pipe the mnemonic as input to an account recovery command
 echo "$helper_account_mnemonic" | provenanced keys add helper-account --home build/node0 -t --hd-path "44'/1'/0'/0/0'" --output json --recover | jq
 # Record the helper account's address in a variable for use in funding
-helper_account_address=$(provenanced keys show -a main-account --home build/node0 --testnet)
+helper_account_address=$(provenanced keys show -a helper-account --home build/node0 --testnet)
 echo "Helper account address: $helper_account_address"
 ```
 

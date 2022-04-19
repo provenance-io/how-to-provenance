@@ -14,7 +14,6 @@ dependencies {
     listOf(
         libs.bundles.bouncyCastle,
         libs.bundles.grpc,
-        libs.bundles.jackson,
         libs.bundles.kotlin,
         libs.bundles.protobuf,
         libs.bundles.provenance,

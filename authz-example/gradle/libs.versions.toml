@@ -1,10 +1,7 @@
 [versions]
 bouncyCastle = "1.70"
 grpc = "1.44.0"
-jackson = "2.13.1"
-jacksonProtobuf = "0.9.12"
 kotlin = "1.6.10"
-kotlinLogging = "2.1.21"
 protobuf = "3.19.1"
 provenanceClient = "1.0.5"
 provenanceHdWallet = "0.1.15"
@@ -16,10 +13,6 @@ bouncyCastleBcProv = { module = "org.bouncycastle:bcprov-jdk15on", version.ref =
 grpcNettyShaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc" }
 grpcProtobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 grpcStub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
-jacksonDataTypeJdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8", version.ref = "jackson" }
-jacksonDataTypeJsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
-jacksonKotlinModule = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
-jacksonProtobufModule = { module = "com.hubspot.jackson:jackson-datatype-protobuf", version.ref = "jacksonProtobuf" }
 kotlinAllOpen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
 kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinStdLibJdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
@@ -28,13 +21,11 @@ protobufJavaUtil = { module = "com.google.protobuf:protobuf-java-util", version.
 provenanceGrpcClient = { module = "io.provenance.client:pb-grpc-client-kotlin", version.ref = "provenanceClient" }
 provenanceHdWallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "provenanceHdWallet" }
 provenanceProto = { module = "io.provenance:proto-kotlin", version.ref = "provenanceProto" }
-provenanceScopeSdk = { module = "io.provenance.scope:sdk", version.ref = "provenanceScope" }
 provenanceScopeUtil = { module = "io.provenance.scope:util", version.ref = "provenanceScope" }
 
 [bundles]
 bouncyCastle = ["bouncyCastleBcProv"]
 grpc = ["grpcNettyShaded", "grpcProtobuf", "grpcStub"]
-jackson = ["jacksonDataTypeJdk8", "jacksonDataTypeJsr310", "jacksonKotlinModule", "jacksonProtobufModule"]
 kotlin = ["kotlinAllOpen", "kotlinReflect", "kotlinStdLibJdk8"]
 protobuf = ["protobufJava", "protobufJavaUtil"]
-provenance = ["provenanceGrpcClient", "provenanceHdWallet", "provenanceProto", "provenanceScopeSdk", "provenanceScopeUtil"]
+provenance = ["provenanceGrpcClient", "provenanceHdWallet", "provenanceProto", "provenanceScopeUtil"]
