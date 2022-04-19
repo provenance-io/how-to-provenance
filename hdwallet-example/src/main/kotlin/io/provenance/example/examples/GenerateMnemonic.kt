@@ -27,8 +27,17 @@ object GenerateMnemonic : ExampleSuite {
             // emulate that output
             default = DefaultParam(value = 256),
             validation = InputValidation(
-                validate = { value -> value % 32 == 0 },
-                validationRuleText = listOf("Input must be a multiple of 32"),
+                validate = { value -> value % 32 == 0 && value >= 32 && value <= 256 },
+                validationRuleText = listOf(
+                    // The strength value is used to create a byte array, which mandates a compatible size
+                    // The underlying MnemonicWords.generate() function does a check to ensure the input is divisible by
+                    // 32 when it runs
+                    "Input must be a multiple of 32",
+                    // The MnemonicWords.generate() function will accept a value of 0, but it will generate no words
+                    "Input must be greater than or equal to 32",
+                    // The MnemonicWords.generate() function throws an exception for values greater than 256
+                    "Input must be less than or equal to 256"
+                ),
             )
         ),
         converter = { value -> value.toInt() },

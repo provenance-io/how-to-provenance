@@ -25,7 +25,7 @@ object Signing : ExampleSuite {
                 default = DefaultParam(value = UUID.randomUUID().toString())
             )
         )
-        println("Using uuid seed [$seed] for wallet derivation")
+        println("Using seed [$seed] for wallet derivation")
         // Generate a Wallet from the randomly-generated UUID
         val wallet = Wallet.fromSeed(hrp = TESTNET_HRP, seed = seed.toDeterministicSeed())
         val account = wallet[TESTNET_HD_PATH]

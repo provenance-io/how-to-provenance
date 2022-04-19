@@ -39,6 +39,11 @@ object GenerateAddress : ExampleSuite {
     private fun generateFromMnemonic(networkType: NetworkType) {
         val mnemonicWords = when (inputEnum<MnemonicGenerationType>("How would you like to generate a mnemonic?")) {
             MnemonicGenerationType.AUTOMATIC -> GenerateMnemonic.promptMnemonic()
+            // The MnemonicWords class will take any string input and establish it as truth.
+            // When manually adding words, security is certainly a risk.  The BIP39 proposal specifies a set of 2048
+            // words that should be used for this purpose, and using that word list is designed to create the most
+            // secure form of mnemonic.  Check out `io.provenance.hdwallet.bip39.WordlistEn.kt` for some interesting
+            // comments on the subject.
             MnemonicGenerationType.MANUAL -> input(
                 message = "Please enter a mnemonic (separated by spaces)",
                 converter = { input -> MnemonicWords.of(input) },
