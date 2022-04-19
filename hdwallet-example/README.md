@@ -13,3 +13,10 @@ Simply execute the following command for an interactive suite of examples:
 ```shell
 ./gradlew run -q
 ```
+
+## HDWallet Libraries for Other Languages
+- .NET: [HDWallet](https://github.com/farukterzioglu/HDWallet)
+- Golang: [go-ethereum-hdwallet](https://github.com/miguelmota/go-ethereum-hdwallet)
+- Javascript: [etherum-hdwallet](https://github.com/miguelmota/ethereum-hdwallet)
+- Python: [python-hdwallet](https://github.com/meherett/python-hdwallet)
+- Swift: [HDWallet](https://github.com/essentiaone/HDWallet)
