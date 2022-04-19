@@ -65,7 +65,7 @@ object FeeGrantExample : ExampleSuite {
         try {
             pbClient.executeTx(
                 signer = helperAccount,
-                transactions = MsgGrantAllowance.newBuilder()
+                transaction = MsgGrantAllowance.newBuilder()
                     // Each fee grant allowance type is specified in this file: https://github.com/provenance-io/provenance/blob/main/third_party/proto/cosmos/feegrant/v1beta1/feegrant.proto
                     .setAllowance(
                         BasicAllowance
@@ -78,8 +78,7 @@ object FeeGrantExample : ExampleSuite {
                     .setGranter(helperAccount.address())
                     // Grantee = account that is authorized to use the granter for fee payments
                     .setGrantee(mainAccount.address())
-                    .build()
-                    .let(::listOf),
+                    .build(),
             )
             // After successfully establishing the grant, it can be queried with the feegrantClient.
             // This sanity check will ensure that the grant was successful
@@ -142,7 +141,7 @@ object FeeGrantExample : ExampleSuite {
             println("[Before Name Bind] Main account [${mainAccount.address()}] nhash = $mainBalanceBeforeTx | Helper account [${helperAccount.address()}] nhash = $helperBalanceBeforeTx")
             pbClient.executeTx(
                 signer = mainAccount,
-                transactions = MsgBindNameRequest.newBuilder()
+                transaction = MsgBindNameRequest.newBuilder()
                     // When the parent name is unrestricted, the address of the account being used to bind the child
                     // name should be used as the address for the parent.  However, if the parent name is restricted,
                     // the owner of the parent name must be set in the address in the parent NameRecord, and the parent must
@@ -155,9 +154,12 @@ object FeeGrantExample : ExampleSuite {
                             .setRestricted(restrict)
                             .build()
                     )
-                    .build()
-                    .let(::listOf),
-                feeGranter = helperAccount,
+                    .build(),
+                // This parameter allows the helperAccount to cover gas and message fees for the sender (mainAccount).
+                // If the fee grant in grantFeeToMainAccount() had not been made, including the helper account's address
+                // in the transaction as a fee granter would fail because the main account has not been enabled for this
+                // via the authz module
+                feeGranter = helperAccount.address(),
             )
             val nameAddress = pbClient.resolveName(fullName)
             if (nameAddress != mainAccount.address()) {
@@ -184,15 +186,14 @@ object FeeGrantExample : ExampleSuite {
         mainAccount: WalletSigner,
         helperAccount: WalletSigner,
     ) {
+        println("Revoking fee grant from [${helperAccount.address()}] to [${mainAccount.address()}]")
         try {
-            println("Revoking fee grant from [${helperAccount.address()}] to [${mainAccount.address()}]")
             pbClient.executeTx(
                 signer = helperAccount,
-                transactions = MsgRevokeAllowance.newBuilder()
+                transaction = MsgRevokeAllowance.newBuilder()
                     .setGrantee(mainAccount.address())
                     .setGranter(helperAccount.address())
-                    .build()
-                    .let(::listOf),
+                    .build(),
             )
             println("Successfully revoked fee grant from [${helperAccount.address()}] to [${mainAccount.address()}]")
         } catch (e: Exception) {

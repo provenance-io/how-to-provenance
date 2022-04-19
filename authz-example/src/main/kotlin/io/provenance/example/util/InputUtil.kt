@@ -54,7 +54,7 @@ object InputUtil {
                 }
             }
         }
-        throw IllegalStateException("Attempt count [$params.tries] violated")
+        throw IllegalStateException("Attempt count [${params.tries}] violated")
     }
 
     fun inputString(message: String, params: InputParams<String> = InputParams()): String = input(message, params) { it }

@@ -7,7 +7,6 @@ import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastTxResponse
 import cosmos.tx.v1beta1.TxOuterClass
 import io.provenance.client.grpc.BaseReqSigner
 import io.provenance.client.grpc.PbClient
-import io.provenance.client.protobuf.extensions.getBaseAccount
 import io.provenance.client.protobuf.extensions.toAny
 import io.provenance.client.wallet.WalletSigner
 import io.provenance.name.v1.QueryResolveRequest
@@ -17,19 +16,16 @@ private const val DEFAULT_GAS_ADJUSTMENT: Double = 2.0
 
 fun PbClient.executeTx(
     signer: WalletSigner,
-    transactions: Collection<Message>,
+    transaction: Message,
     broadcastMode: BroadcastMode = DEFAULT_BROADCAST_MODE,
     gasAdjustment: Double = DEFAULT_GAS_ADJUSTMENT,
-    feeGranter: WalletSigner? = null,
+    feeGranter: String? = null,
 ): BroadcastTxResponse = this.estimateAndBroadcastTx(
-    txBody = TxOuterClass.TxBody.newBuilder().addAllMessages(transactions.map { it.toAny() }).build(),
-    signers = BaseReqSigner(
-        signer = signer,
-        account = this.authClient.getBaseAccount(signer.address()),
-    ).let(::listOf),
+    txBody = TxOuterClass.TxBody.newBuilder().addMessages(transaction.toAny()).build(),
+    signers = BaseReqSigner(signer = signer).let(::listOf),
     mode = broadcastMode,
     gasAdjustment = gasAdjustment,
-    feeGranter = feeGranter?.address(),
+    feeGranter = feeGranter,
 ).also { response ->
     // A non-zero response code indicates a failure of some sort.  The rawLog contains hints and information about the
     // failure in this scenario. Emit the message as an exception to reveal the issue
