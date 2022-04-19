@@ -1,0 +1,31 @@
+[versions]
+bouncyCastle = "1.70"
+grpc = "1.44.0"
+kotlin = "1.6.10"
+protobuf = "3.19.1"
+provenanceClient = "1.0.5"
+provenanceHdWallet = "0.1.15"
+provenanceProto = "1.8.0"
+provenanceScope = "0.4.9"
+
+[libraries]
+bouncyCastleBcProv = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncyCastle" }
+grpcNettyShaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc" }
+grpcProtobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
+grpcStub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
+kotlinAllOpen = { module = "org.jetbrains.kotlin:kotlin-allopen", version.ref = "kotlin" }
+kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlinStdLibJdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
+protobufJava = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+protobufJavaUtil = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
+provenanceGrpcClient = { module = "io.provenance.client:pb-grpc-client-kotlin", version.ref = "provenanceClient" }
+provenanceHdWallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "provenanceHdWallet" }
+provenanceProto = { module = "io.provenance:proto-kotlin", version.ref = "provenanceProto" }
+provenanceScopeUtil = { module = "io.provenance.scope:util", version.ref = "provenanceScope" }
+
+[bundles]
+bouncyCastle = ["bouncyCastleBcProv"]
+grpc = ["grpcNettyShaded", "grpcProtobuf", "grpcStub"]
+kotlin = ["kotlinAllOpen", "kotlinReflect", "kotlinStdLibJdk8"]
+protobuf = ["protobufJava", "protobufJavaUtil"]
+provenance = ["provenanceGrpcClient", "provenanceHdWallet", "provenanceProto", "provenanceScopeUtil"]
