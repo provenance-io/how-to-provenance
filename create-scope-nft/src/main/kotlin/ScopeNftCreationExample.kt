@@ -4,6 +4,8 @@ import io.provenance.client.grpc.BaseReqSigner
 import io.provenance.client.grpc.GasEstimationMethod
 import io.provenance.client.grpc.PbClient
 import io.provenance.client.protobuf.extensions.toAny
+import io.provenance.client.wallet.NetworkType
+import io.provenance.client.wallet.fromMnemonic
 import io.provenance.metadata.v1.MsgWriteRecordRequest
 import io.provenance.metadata.v1.MsgWriteScopeRequest
 import io.provenance.metadata.v1.MsgWriteSessionRequest
@@ -44,7 +46,7 @@ class ScopeNftCreationExample {
         println("Please enter your mnemonic")
     }
     val mnemonic = readLine()!!
-    val signer = WalletSigner(NetworkType.TESTNET, mnemonic)
+    val signer = fromMnemonic(NetworkType.COSMOS_TESTNET, mnemonic)
 
     init {
         println("Please enter a value for the record")

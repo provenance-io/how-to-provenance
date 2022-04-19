@@ -2,8 +2,8 @@ import cosmos.tx.v1beta1.ServiceOuterClass
 import cosmos.tx.v1beta1.TxOuterClass
 import io.provenance.client.grpc.BaseReqSigner
 import io.provenance.client.grpc.PbClient
-import io.provenance.client.protobuf.extensions.getBaseAccount
 import io.provenance.client.protobuf.extensions.toAny
+import io.provenance.client.wallet.WalletSigner
 import io.provenance.metadata.v1.ContractSpecification
 import io.provenance.metadata.v1.ContractSpecificationRequest
 import io.provenance.metadata.v1.DefinitionType
