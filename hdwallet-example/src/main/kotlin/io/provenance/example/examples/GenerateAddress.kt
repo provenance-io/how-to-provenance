@@ -5,6 +5,7 @@ import io.provenance.example.util.InputParams
 import io.provenance.example.util.InputUtil.input
 import io.provenance.example.util.InputUtil.inputEnum
 import io.provenance.example.util.InputUtil.inputString
+import io.provenance.example.util.toDeterministicSeed
 import io.provenance.example.util.toHumanReadableString
 import io.provenance.hdwallet.bip39.DeterministicSeed
 import io.provenance.hdwallet.bip39.MnemonicWords
@@ -58,6 +59,8 @@ object GenerateAddress : ExampleSuite {
             mnemonicWords = mnemonicWords,
             testnet = networkType == NetworkType.TESTNET,
         )
+        // The Wallet class overrides the get operator function to allow an HDPath to be provided for account derivation.
+        // The Account class contains a simple access for the Bech32 address in its value property.
         val address = wallet[networkType.hdPath].address.value
         println("Established [${networkType.displayName}] address [$address] from mnemonic using HD path [${networkType.hdPath}]")
     }
@@ -69,12 +72,7 @@ object GenerateAddress : ExampleSuite {
     private fun generateFromSeed(networkType: NetworkType) {
         val seedUuid = UUID.randomUUID()
         println("Using uuid [$seedUuid] as bytes for wallet seed")
-        val wallet = Wallet.fromSeed(
-            hrp = networkType.hrp,
-            // A DeterministicSeed can also be created using a java SecretKey, but this is much simpler to
-            // demonstrate
-            seed = DeterministicSeed.fromBytes(seedUuid.toString().toByteArray(charset = Charsets.UTF_8))
-        )
+        val wallet = Wallet.fromSeed(hrp = networkType.hrp, seed = seedUuid.toDeterministicSeed())
         val address = wallet[networkType.hdPath].address.value
         println("Established [${networkType.displayName}] address [$address] from seed using HD path [${networkType.hdPath}]")
     }

@@ -3,6 +3,7 @@ package io.provenance.example
 import io.provenance.example.examples.ExampleSuite
 import io.provenance.example.examples.GenerateMnemonic
 import io.provenance.example.examples.GenerateAddress
+import io.provenance.example.examples.Signing
 import io.provenance.example.util.InputUtil.inputEnum
 
 /**
@@ -18,6 +19,7 @@ fun main() {
         --------------------------------------------------------------------------------------------------------------
         GENERATE_ADDRESS:  Example of using the Wallet class to derive a bech32 address.
         GENERATE_MNEMONIC: Example of using the MnemonicWords class to generate a mnemonic.
+        SIGNING:           Example of using the BCECSigner class to sign a message payload.
         
         Type "quit" at any time into any prompt to exit the program early.
         --------------------------------------------------------------------------------------------------------------
@@ -36,5 +38,6 @@ fun main() {
 
 private enum class Examples(val suite: ExampleSuite) {
     GENERATE_ADDRESS(suite = GenerateAddress),
-    GENERATE_MNEMONIC(suite = GenerateMnemonic)
+    GENERATE_MNEMONIC(suite = GenerateMnemonic),
+    SIGNING(suite = Signing),
 }
