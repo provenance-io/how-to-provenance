@@ -57,9 +57,9 @@ object FeeGrantExample : ExampleSuite {
             params = InputParams(
                 // Default to 10 billion. This is much more than what is needed, but shows that very large amounts
                 // can be specified without issue
-                default = DefaultParam(10_000_000_000L)
+                default = DefaultParam(10_000_000_000.toBigDecimal())
             ),
-            converter = { it.toLongOrNull() }
+            converter = { it.toBigDecimalOrNull() }
         )
         println("Establishing a grant for ${feeGrantAmount}nhash from [${helperAccount.address()}] to [${mainAccount.address()}]")
         try {

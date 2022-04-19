@@ -10,6 +10,7 @@ import io.provenance.client.grpc.PbClient
 import io.provenance.client.protobuf.extensions.toAny
 import io.provenance.client.wallet.WalletSigner
 import io.provenance.name.v1.QueryResolveRequest
+import java.math.BigDecimal
 
 private val DEFAULT_BROADCAST_MODE = BroadcastMode.BROADCAST_MODE_BLOCK
 private const val DEFAULT_GAS_ADJUSTMENT: Double = 2.0
@@ -55,7 +56,9 @@ fun PbClient.resolveName(name: String): String = nameClient.resolve(
 
 /**
  * A helper function to determine how much of a specific denomination of coin a specified bech32 address currently owns.
+ * Converts to a BigDecimal to provide a numeric representation of the balance amount.  64bit numeric types like Long
+ * can potentially be too small to hold the entire balance of an account.
  */
-fun PbClient.queryBalance(address: String, denom: String): Long = bankClient.balance(
+fun PbClient.queryBalance(address: String, denom: String): BigDecimal = bankClient.balance(
     QueryBalanceRequest.newBuilder().setAddress(address).setDenom(denom).build()
-).balance.amount.toLong()
+).balance.amount.toBigDecimal()
