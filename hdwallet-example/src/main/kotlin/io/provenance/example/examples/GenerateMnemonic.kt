@@ -10,7 +10,8 @@ import io.provenance.hdwallet.bip39.MnemonicWords
 /**
  * A mnemonic phrase is a secret seed that can be used to derive an infinite number of accounts on a blockchain.
  * These phrases are the building blocks of a Provenance account's address.  Provenance uses a standard pathing to
- * derive its accounts from a generated mnemonic.  As such,
+ * derive its accounts from a generated mnemonic.
+ * A good readme on how the mnemonic words list is intended to be used and its purpose: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
  */
 object GenerateMnemonic : ExampleSuite {
     override fun start() {
