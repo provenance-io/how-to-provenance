@@ -5,3 +5,4 @@ Welcome to the 'How To Provenance' repository, where you can find examples of Pr
 ## Index
 1. [Event Stream Example](event-stream-example)
 2. [Provenance Smart Contract Example](provenance-smart-contract-example)
+3. [P8e Contract + SDK Example](p8e-contract-sdk-example)
