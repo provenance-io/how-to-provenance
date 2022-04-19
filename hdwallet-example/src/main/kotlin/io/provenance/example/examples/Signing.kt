@@ -41,7 +41,8 @@ object Signing : ExampleSuite {
             privateKey = account.keyPair.privateKey,
             payload = payload,
         )
-        println("[SIGNED] Generated signature for payload [$messageToSign]")
+        val signedBtcPayload = signature.encodeAsBTC().toByteArray()
+        println("[SIGNED] Generated signature for payload [$messageToSign] and derived BTC bytes [${signedBtcPayload.joinToString(separator = " ") { it.toString() }}]")
         // Provide the public key from the derived Wallet's account, alongside the hash payload and the fetched
         // ECDSASignature value to ensure that the signature is valid.
         // ECDSA == Elliptic Curve Digital Signature Algorithm
