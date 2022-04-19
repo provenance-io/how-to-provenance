@@ -67,6 +67,7 @@ class ScopeSpecificationCreator(
                     Description.newBuilder()
                     .setName("testScopeSpec")
                     .setDescription("A scope specification for testing")
+                    .setWebsiteUrl("https://github.com/provenance-io/how-to-provenance/tree/main/create-scope-nft/src/main/kotlin/ScopeSpecificationCreator.kt") // a link to the code defining this scope spec, this could also be an informational website of some sort
                 ).addPartiesInvolved(PartyType.PARTY_TYPE_OWNER)
                 .addOwnerAddresses(signer.address())
             )
@@ -85,6 +86,7 @@ class ScopeSpecificationCreator(
                     Description.newBuilder()
                     .setName("myCoolContract")
                     .setDescription("A contract that does things for testScopeSpec")
+                    .setWebsiteUrl("https://github.com/provenance-io/how-to-provenance/tree/main/create-scope-nft/src/main/kotlin/ScopeNftCreationExample.kt") // a link to the code that is being executed for this contract
                 )
                 .addPartiesInvolved(PartyType.PARTY_TYPE_OWNER)
                 .setClassName("io.provenance.example.testContract")
