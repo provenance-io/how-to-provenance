@@ -26,7 +26,7 @@ object Signing : ExampleSuite {
             )
         )
         println("Using seed [$seed] for wallet derivation")
-        // Generate a Wallet from the randomly-generated UUID
+        // Generate a Wallet from the input seed
         val wallet = Wallet.fromSeed(hrp = TESTNET_HRP, seed = seed.toDeterministicSeed())
         val account = wallet[TESTNET_HD_PATH]
         println("Signing payload [$messageToSign] with testnet account address [${account.address.value}]")
