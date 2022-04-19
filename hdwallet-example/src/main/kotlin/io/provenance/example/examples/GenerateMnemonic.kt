@@ -4,6 +4,7 @@ import io.provenance.example.util.DefaultParam
 import io.provenance.example.util.InputParams
 import io.provenance.example.util.InputUtil.input
 import io.provenance.example.util.InputValidation
+import io.provenance.example.util.toHumanReadableString
 import io.provenance.hdwallet.bip39.MnemonicWords
 
 /**
@@ -18,15 +19,6 @@ object GenerateMnemonic : ExampleSuite {
 
     // Use Provenance's MnemonicWords helper class to generate a new mnemonic using the user's strength input
     fun promptMnemonic(): MnemonicWords = MnemonicWords.generate(strength = promptMnemonicStrength())
-
-    /**
-     * Each "word" in the MnemonicWords class is stored as a CharArray.  This function simply joins them using Kotlin's
-     * CharArray.concatToString() helper function, which is the same as instantiating a String using the CharArray as
-     * a constructor parameter.
-     */
-    private fun MnemonicWords.toHumanReadableString(): String = this
-        .words
-        .joinToString(separator = " ") { it.concatToString() }
 
     private fun promptMnemonicStrength(): Int = input(
         message = "Enter a mnemonic strength (multiple of 32)",
