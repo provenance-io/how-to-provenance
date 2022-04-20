@@ -19,8 +19,8 @@ import java.util.UUID
  */
 object GenerateAddress : ExampleSuite {
     override fun start() {
-        // Networks generally establish different prefixes for main and test networks.  For instance, provenance uses
-        // tp for testnet, and pb for mainnet.
+        // Networks generally establish different prefixes for main and test networks.  For instance, the Provenance
+        // Blockchain uses tp for testnet, and pb for mainnet.
         val networkType = inputEnum(
             messagePrefix = "[Choose a network type]",
             params = InputParams(default = DefaultParam(value = NetworkType.MAINNET)),
@@ -85,7 +85,7 @@ object GenerateAddress : ExampleSuite {
 
 /**
  * A shortcut to the Hrp enum's ProvenanceBlockchain values.  The Hrp enum also provides cosmos and crpyto values,
- * but those address types are not necessary for interacting with the Provenance ecoysystem.
+ * but those address types are not necessary for interacting with the Provenance Blockchain ecoysystem.
  *
  * @param hrp Human Readable Prefix.  This value is appended to the beginning of the account's bech32 address
  * @param hdPath The hierarchical deterministic path to a Provenance address.

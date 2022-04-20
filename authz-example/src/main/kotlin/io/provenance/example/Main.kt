@@ -15,12 +15,12 @@ import io.provenance.example.util.InputUtil.inputEnum
 fun main() {
     println("""
         Provenance AuthZ Examples
-        --------------------------------------------------------------------------------------------------------------
+        -------------------------------------------------------------------------------------------------------------------------
         FEE_GRANT:     Example on how to use authz to have an account cover gas/message fees for a different account.
-        MESSAGE_GRANT: Example on how to use authz with the provenance metadata module to alter a scope specification.
+        MESSAGE_GRANT: Example on how to use authz with the Provenance Blockchain metadata module to alter a scope specification.
         
         Type "quit" at any time into any prompt to exit the program early.
-        --------------------------------------------------------------------------------------------------------------
+        -------------------------------------------------------------------------------------------------------------------------
         
     """.trimIndent())
     // Use the InputUtil's inputEnum helper function to get one of the Examples enum values and execute the suite it

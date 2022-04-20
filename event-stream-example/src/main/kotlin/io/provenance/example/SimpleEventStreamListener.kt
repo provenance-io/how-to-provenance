@@ -16,7 +16,7 @@ import kotlinx.coroutines.runBlocking
 val EVENTS = listOf("wasm")
 
 /**
- * Listen to the Provenance event stream for transaction events of interest
+ * Listen to the Provenance Blockchain event stream for transaction events of interest
  *
  * Provide the following environment variables to supply connection information
  * NODE_URI: the uri of a Provenance node (i.e. http://localhost:26657 if running locally)
