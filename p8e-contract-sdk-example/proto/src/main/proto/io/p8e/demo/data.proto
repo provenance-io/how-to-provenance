@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package demo;
+
+option java_package = "io.p8e.demo.proto";
+option java_outer_classname = "LoanData";
+
+message Loan {
+  string id = 1;
+  string type = 2;
+  string originator = 3;
+}
+
+message Servicer {
+  string id = 1;
+  string name = 2;
+}

@@ -1,0 +1,59 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password1
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ CMD-SHELL, pg_isready -U postgres ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d/
+      - postgres:/var/lib/postgresql/data
+
+  object-store:
+    image: ghcr.io/provenance-io/object-store:0.7.0
+    container_name: object-store
+    depends_on:
+      - postgres
+    environment:
+      - OS_URL=0.0.0.0
+      - OS_PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=object-store
+      - DB_SCHEMA=public
+      - DB_USER=postgres
+      - DB_PASS=password1
+      - TRACE_HEADER=x-trace-header
+      - URI_HOST=localhost:8080
+      - STORAGE_TYPE=file_system
+      - STORAGE_BASE_PATH=/mnt/data
+      - RUST_LOG=warn,object_store=debug
+    ports:
+      - "8090:8080"
+    volumes:
+      - object_store:/mnt/data
+
+  provenance:
+    image: provenanceio/provenance:v1.8.0
+    container_name: provenance
+    command: bash -c "cp -rn /home/provenance_seed/* /home/provenance && /usr/bin/provenanced -t --home /home/provenance start"
+    ports:
+      - "1317:1317"
+      - "9090:9090"
+      - "26657:26657"
+    volumes:
+      - ./provenance:/home/provenance_seed:ro
+      - provenance:/home/provenance
+
+volumes:
+  object_store:
+  postgres:
+  provenance:
