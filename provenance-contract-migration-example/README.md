@@ -26,7 +26,7 @@ ls -lf ./artifacts/provenance_contract_migration_example.wasm
 
 ### Step #2: Store the WASM
 
-Just like before, the contract will need to be stored on the Provenance blockchain.  In order for an existing contract to be migrated to a new contract, the WASM must be stored and have a valid `code_id`.  
+Just like before, the contract will need to be stored on the Provenance blockchain.  In order for an existing contract to be migrated to a new contract, the WASM must be stored and have a valid `code_id`.
 
 Remember, you will need to be in the `provenance` repository's directory to execute `provenanced` commands with a `home` of `build/node0`.  This is because the repository's `make localnet-start` command automatically creates a nhash-funded account called `node0`, and the `build/node0` directory in this repository contains the relevant key information in order for you to act upon that account's behalf.  If you no longer have the `node0` variable established with the proper address, you can find it again with:
 ```sh
@@ -218,7 +218,7 @@ Unless you were experimenting with `provenanced` between commands in this exampl
 }
 ```
 
-Let's invoke the `increment_counter` route with some provided funds, using the already-funded `node0` account.  This time, we'll omit the `increment_amount` value and let the contract use its default value of incrementing by 1.  It's important to note the `--amount 100nhash` flag on this request.  This tells provenance that `100nhash` should be supplied from `node0` and sent into the contract.  The contract is coded to immediately send those funds to the previous-specified fee address.  Run the following:
+Let's invoke the `increment_counter` route with some provided funds, using the already-funded `node0` account.  This time, we'll omit the `increment_amount` value and let the contract use its default value of incrementing by 1.  It's important to note the `--amount 100nhash` flag on this request.  This tells the Provenance Blockchain that `100nhash` should be supplied from `node0` and sent into the contract.  The contract is coded to immediately send those funds to the previous-specified fee address.  Run the following:
 ```sh
 provenanced tx wasm execute \
 "$contract_address" \
@@ -263,6 +263,6 @@ The command, before, showed that the fee collector had no funds at all.  Now, yo
 
 Well done!  You can now use the `provenanced` client to store, instantiate, execute, query and migrate smart contracts.  You also learned how to use a few other modules along the way!  The contract contains a few other endpoints: `add_attribute` and `send_funds`.  Feel free to use the execution logic you learned here to try out those other execution routes.
 
-Optional:  The execution routes map directly to the `ExecuteMsg` struct in the [msg.rs](src/msg.rs) file.  Additionally, the queries are mapped to the `QueryMsg` struct in that file.  To add a new route, add a new enum variant to these messages, and map its functionality in the [contract.rs](src/contract.rs) file.  
+Optional:  The execution routes map directly to the `ExecuteMsg` struct in the [msg.rs](src/msg.rs) file.  Additionally, the queries are mapped to the `QueryMsg` struct in that file.  To add a new route, add a new enum variant to these messages, and map its functionality in the [contract.rs](src/contract.rs) file.
 
 Reminder:  The [provenance smart contract tutorial](https://github.com/provenance-io/provwasm/blob/main/docs/tutorial/01-overview.md) contains an in-depth explanation of the inner-workings of a smart contract.  If you're interesting, that's a great place to start building your knowledge, and, more importantly, your own smart contract!

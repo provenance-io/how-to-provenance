@@ -8,10 +8,10 @@ import io.provenance.example.util.InputUtil.inputString
 import java.net.URI
 
 /**
- * A util object used to obtain a PbClient that connects to a provenance environment.  For the purposes of these examples,
- * only testnet environments (localnet included) will function with this client.  The client itself can be established
- * through this suite to connect to a mainnet, but all derived account addresses will use testnet HD pathing and be
- * derived with the prefix "tp" which will prevent transactions from being accepted by a mainnet node.
+ * A util object used to obtain a PbClient that connects to a Provenance Blockchain environment.  For the purposes of
+ * these examples, only testnet environments (localnet included) will function with this client.  The client itself can
+ * be established through this suite to connect to a mainnet, but all derived account addresses will use testnet HD
+ * pathing and be derived with the prefix "tp" which will prevent transactions from being accepted by a mainnet node.
  */
 object PbClientUtil {
     private const val LOCAL_CHAIN_ID = "chain-local"

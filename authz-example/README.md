@@ -11,7 +11,7 @@ another account.
 - Java JDK 11 (install via an sdk manager, like [SdkMan](https://sdkman.io/))
 - [Gradle](https://gradle.org/install/): In order to build and execute examples
 - [Provenance](https://github.com/provenance-io/provenance): An understanding of the ecyosystem and the ability to connect to a node
-- Two provenance accounts, funded with enough hash to execute messages to bind names, create scope specifications, etc
+- Two Provenance Blockchain accounts, funded with enough hash to execute messages to bind names, create scope specifications, etc
 
 ## Running the Example
 
@@ -20,7 +20,7 @@ To run the example codebase, simply execute the gradle wrapper from this directo
 ./gradlew run -q
 ```
 
-## Local Provenance Setup
+## Local Provenance Blockchain Setup
 
 If running the project locally from the provenance repository, the following commands can establish the required 
 accounts and their respective mnemonics:

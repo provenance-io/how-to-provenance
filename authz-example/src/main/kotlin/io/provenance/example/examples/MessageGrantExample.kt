@@ -49,8 +49,8 @@ object MessageGrantExample : ExampleSuite {
 
     /**
      * A simple demonstration of the creation of a scope specification.  This, alone, does relatively nothing in the
-     * provenance ecosystem.  However, it does create a metadata object owned solely by the helper account.  This
-     * ownership cannot be changed without either including the helper account as a signer, or by using authz to
+     * Provenance Blockchain ecosystem.  However, it does create a metadata object owned solely by the helper account.
+     * This ownership cannot be changed without either including the helper account as a signer, or by using authz to
      * delegate those permissions to another account.
      */
     private fun createScopeSpecification(

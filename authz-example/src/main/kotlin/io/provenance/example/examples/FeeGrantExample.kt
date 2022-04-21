@@ -107,7 +107,7 @@ object FeeGrantExample : ExampleSuite {
         mainAccount: WalletSigner,
         helperAccount: WalletSigner,
     ) {
-        println("Binding a new name on Provenance for account [${mainAccount.address()}] using [${helperAccount.address()}] to pay fees")
+        println("Binding a new name on the Provenance Blockchain for account [${mainAccount.address()}] using [${helperAccount.address()}] to pay fees")
         val inputPrefix = "[Name Registration]"
         val childName = inputString(
             message = "$inputPrefix Enter a name to bind (alpha characters only)",

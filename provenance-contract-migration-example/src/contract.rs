@@ -16,7 +16,7 @@ use crate::{
 
 /// The instantiation entry_point is the first function that is ever executed in a smart contract, and
 /// it is only ever executed once.  This function is required to have each argument it specifies, and is
-/// configured based on the final argument, msg.  
+/// configured based on the final argument, msg.
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut<ProvenanceQuery>,
@@ -129,7 +129,7 @@ pub fn query(
             let target_attribute_name =
                 format_attribute_name(&attribute_prefix, &contract_state.contract_base_name);
             // Provwasm provides a wrapper for the cosmwasm's QuerierWrapper, which is contained in deps.querier.
-            // This allows for Provenance modules to be queried simply and easily.
+            // This allows for Provenance Blockchain modules to be queried simply and easily.
             let provenance_querier = ProvenanceQuerier::new(&deps.querier);
             // This check is to ensure that the attribute being searched for exists.  The AddAttribute route
             // ensures that only a single attribute for a single name can be added, so this check verifies that
@@ -383,8 +383,8 @@ fn add_attribute_to_contract(
         // Simply #derive(Serialize, Deserialize) using serde and these binary helper functions will automatically
         // know how to convert them into cosmwasm's Binary struct.
         to_binary(&attribute_text)?,
-        // Provenance requires that each attribute be tagged with its type.  Custom structs would use type AttributeValueType::Json,
-        // but this simple example just uses a String.
+        // The Provenance Blockchain requires that each attribute be tagged with its type.  Custom
+        // structs would use type AttributeValueType::Json, but this simple example just uses a String.
         AttributeValueType::String,
     )?;
     Ok(Response::new()
@@ -440,7 +440,8 @@ fn send_funds(
 }
 
 // All state functionality for cosmwasm works correctly during test code.
-// Provwasm has also supplied a very useful suite for mocking Provenance modules during test execution.
+// Provwasm has also supplied a very useful suite for mocking Provenance Blockchain modules during
+// test execution.
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
@@ -521,8 +522,8 @@ mod tests {
             ),
         }
         // It's also important to verify that the proper attributes are added to the contract response.
-        // These attributes can be viewed in the Provenance event stream and be used to intercept contract
-        // actions as they occur
+        // These attributes can be viewed in the Provenance Blockchain event stream and be used to
+        // intercept contract actions as they occur
         assert_eq!(
             2,
             response.attributes.len(),
