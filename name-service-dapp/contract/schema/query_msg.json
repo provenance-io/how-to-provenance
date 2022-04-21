@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "description": "A message sent to query contract config state.",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "query_request"
+      ],
+      "properties": {
+        "query_request": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "query_address_by_name"
+      ],
+      "properties": {
+        "query_address_by_name": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "query_names_by_address"
+      ],
+      "properties": {
+        "query_names_by_address": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "search_for_names"
+      ],
+      "properties": {
+        "search_for_names": {
+          "type": "object",
+          "required": [
+            "search"
+          ],
+          "properties": {
+            "search": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

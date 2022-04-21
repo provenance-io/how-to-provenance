@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InitMsg",
+  "description": "A message sent to initialize the contract state.",
+  "type": "object",
+  "required": [
+    "fee_amount",
+    "fee_collection_address",
+    "name"
+  ],
+  "properties": {
+    "fee_amount": {
+      "type": "string"
+    },
+    "fee_collection_address": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    }
+  }
+}
