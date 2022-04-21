@@ -11,6 +11,7 @@ Welcome to the 'How To Provenance' repository, where you can find examples of Pr
 6. [P8e Contract + SDK Example](p8e-contract-sdk-example): Demonstrates how to use the p8e SDK and how to run a contract.
 7. [Provenance Contract Migration Example](provenance-contract-migration-example): A continuation of the [Provenance Smart Contract Example](provenance-smart-contract-example) that demonstrates how to migrate a smart contract from one version to another.
 8. [Provenance Smart Contract Example](provenance-smart-contract-example): Contains a smart contract that demonstrates various interactions with Provenance Blockchain in Rust via the provwasm library.
+9. [Name Service dApp](name-service-dapp): Contains a simple example dApp for registering names to an account using a smart contract, the Provenance Wallet and a React frontend (no backend other than the blockchain itself)
 
 ## Examples: Ordered by Domain Knowledge
 
@@ -29,3 +30,6 @@ Each example is listed below in order of knowledge needed to proceed, leveled:
 ### 300
 - 300: [HDWallet Example](hdwallet-example)
 - 301: [Authz Example](authz-example)
+
+### 400
+- 400: [Name Service dApp](name-service-dapp)
