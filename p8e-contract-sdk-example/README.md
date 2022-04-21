@@ -6,8 +6,8 @@ Blockchain's [p8e scope SDK](https://github.com/provenance-io/p8e-scope-sdk).
 ## Prerequisites
 
 - Ability to download from GitHub container registry ([guide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry))
-- Docker
-- Kotlin
+- [Docker](https://docs.docker.com/get-started/)
+- [Kotlin](https://kotlinlang.org/docs/home.html)
 
 ## Running the Example
 
@@ -32,13 +32,21 @@ __Note__: If this fails when pulling object store, check that you can pull image
 
 ### 2. Publish the Contracts
 
+Uses the [p8e-gradle-plugin](https://github.com/provenance-io/p8e-gradle-plugin) to digest the files included in the [contract](contract) project
+and publish them as a contract to the locally running Provenance Blockchain instance.
+
 ```shell
 source docker/env/bootstrap.env && ./gradlew p8eClean p8eBootstrap --info
 ```
 
 ### 3. Run the Example
 
-This step is can be run any number of times while the local docker environment is up.
+This step is can be run any number of times while the local docker environment is up.  The example creates an example
+[scope](https://docs.provenance.io/modules/metadata-module#scope-data-structures), which contains data about a fake 
+loan that has been originated for a borrower.  After populating the scope with loan data, it showcases how to use the 
+Contract Execution Environment to update the data by attaching a servicer to that loan.  This example effectively 
+memorializes the new loan and servicer on the Provenance Blockchain, creating an immutable record of changes that may
+occur during a loan's lifecycle.
 
 ```shell
 ./gradlew application:run
