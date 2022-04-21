@@ -13,16 +13,30 @@ Messages).
 
 For more information about the Metadata Module, please reference the [Provenance Blockchain Docs](https://docs.provenance.io/modules/metadata-module).
 
-To run the example, use the following command: 
+## Project Prerequisites
+* [Provenance Blockchain Environment](https://github.com/provenance-io/provenance): See the [provenance-smart-contract-example](../provenance-smart-contract-example) for a guide on running a local Provenance Blockchain environment.
+* Java JDK 11 (install via an sdk manager, like [SdkMan](https://sdkman.io/))
+* [Gradle](https://gradle.org/install/) for building/running the examples
+
+## Running the Project
+
+To run the example, use the following command:
+
 ```shell
 ./gradlew run
 ```
 
-Once you have run this once, you may re-use the same scope specification id by setting the env var `SCOPE_SPEC_UUID`. The
-example has defaults for your local chain-id and node uri, but you may override these as need be.  Example:
+## Optional Arguments
+
+This project uses various environment variables to customize its execution.  None of these values need to be provided
+in order for the application to run correctly.  The values are as follows:
+
+* `CHAIN_ID`: The blockchain identifier to which the application connects.  The default value is `chain-local`.
+* `NODE_URI`: The blockchain node to which the application connects.  The default value is `grpc://localhost:9090`
+* `SCOPE_SPEC_UUID`: The UUID value that is used to derive the [scope specification](https://docs.provenance.io/modules/metadata-module#scope-specification)'s bech32 address.  The default value is randomly generated.  The application prints this value during execution for re-use in multiple runs.
+
+To run the application with a specified environment variable, simply add it to the beginning of the gradle script execution:
 
 ```shell
 SCOPE_SPEC_UUID=<your_uuid_here> ./gradlew run
 ```
-
-## TODO: Prerequisites
