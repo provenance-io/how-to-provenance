@@ -159,7 +159,7 @@ This command will automatically instantiate the contract with a base name of `ex
 
 The important piece of output in the result from this transaction is the `contract_address` value.  When a contract is instantiated on the Provenance blockchain, it is assigned a bech32 address, and this address can be used to run `execute` and `query` functions against the contract.  To automatically find this value with `jq`, modify the end of the previous comamnd to be: `jq '.logs[] | select(.msg_index == 0) | .events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value'`.
 
-The the remaining steps, assume that the contract address has been located by hand or `jq`, and exported to the following variable:
+The remaining steps, assume that the contract address has been located by hand or `jq`, and exported to the following variable:
 ```sh
 export contract_address=tp1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs60nkqw
 ```
