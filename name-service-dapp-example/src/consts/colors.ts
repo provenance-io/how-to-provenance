@@ -1,0 +1,7 @@
+export const PRIMARY_BACKGROUND = '#F6F5F4'
+export const TEXT = '#000'
+export const TEXT_ACCENT = '#5184A4'
+export const LIGHT = '#FFF'
+export const DARKEN = '#EDEBE9'
+export const DARK = '#655C53'
+export const WARN = '#E53B10'

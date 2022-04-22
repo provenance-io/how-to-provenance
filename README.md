@@ -13,6 +13,7 @@ The Provenance Blockchain Foundation is always eager for contributors.  If you h
 6. [P8e Contract + SDK Example](p8e-contract-sdk-example): (Kotlin/Gradle/Docker) Run local [docker](https://www.docker.com) containers to use the [Contract Execution Environment](https://docs.provenance.io/p8e/overview) and how to run a contract.  This example illustrates how with [p8e](https://github.com/provenance-io/p8e) one might execute complex data storage and manipulation using Kotlin as a communication layer with the Provenance Blockchain.
 7. [Provenance Smart Contract Example](provenance-smart-contract-example): (Rust/Cargo) Store and instantite a smart contract on the [Provenance Blockchain](https://github.com/provenance-io/provenance) written in Rust. Uses the [provwasm library](https://github.com/provenance-io/provwasm) to do Provenance Blockchain interactions, like using the [name module](https://docs.provenance.io/modules/name-module) and adding [attributes](https://docs.provenance.io/modules/account) to persist data directly on the blockchain.
 8. [Provenance Contract Migration Example](provenance-contract-migration-example): (Rust/Cargo) Migrate the code of an existing smart contract on the Provenance Blockchain to a new version.  A continuation of the [Provenance Smart Contract Example](provenance-smart-contract-example).
+9. [Name Service dApp](name-service-dapp-example): Run a simple dApp that registers human-readable names to an account using a smart contract, the Provenance Wallet (to be publicly available soon) and a [React](reactjs.org) frontend (no backend other than the blockchain itself)
 
 ## Examples: Ordered by Domain Knowledge
 
@@ -31,3 +32,6 @@ Each example is listed below in order of knowledge needed to proceed, leveled:
 ### 300
 - 300: [HDWallet Example](hdwallet-example)
 - 301: [Authz Example](authz-example)
+
+### 400
+- 400: [Name Service dApp](name-service-dapp)
