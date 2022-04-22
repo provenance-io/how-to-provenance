@@ -38,8 +38,7 @@ for an example usage.
    variables can be included to modify behavior, but are not necessary for the application to run successfully:
    1. `NODE_URI`: A connection URI to a Provenance Blockchain node.  This value defaults to a connection to the 
                   figure.tech testnet node.  If running a local node, use: `http://localhost:26657`.
-   2. `START_HEIGHT`: The block height at which to start streaming events.  This value defaults to null, indicating that
-                      that the stream should start at the very first block ever cut by the chain.
+   2. `START_HEIGHT`: The block height at which to start streaming events.  This value defaults to null, which will start listening to live blocks being cut (not historical blocks) only.
 2. [KafkaConsumerExample](src/main/kotlin/io/provenance/example/KafkaConsumerExample.kt): a simple producer/consumer setup
    illustrating publishing blocks to/reading blocks from a Kafka topic. Note: There is an included [Docker Compose](https://docs.docker.com/compose/)
    setup to stand up a local single-node kafka instance for testing purposes, can be run using the [kafka.yml](src/main/docker/kafka.yml)
@@ -51,9 +50,9 @@ for an example usage.
                                         servers created with the [local kafka docker-compose file](src/main/docker/kafka.yml).
    3. `NODE_URI`: A connection URI to a Provenance Blockchain node.  This value defaults to a connection to the
       figure.tech testnet node.  If running a local node, use: `http://localhost:26657`.
-   4. `START_HEIGHT`: The block height at which to start streaming events.  This value defaults to null, indicating that
-      that the stream should start at the very first block ever cut by the chain.
-   To start and stop local kafka nodes in docker containers for this example, the following commands can be used:
+   4. `START_HEIGHT`: The block height at which to start streaming events.  This value defaults to null, which will start listening to live blocks being cut (not historical blocks) only.
+
+To start and stop local kafka nodes in docker containers for this example, the following commands can be used:
 ```shell
 # Start the kafka container:
 docker compose -f src/main/docker/kafka.yml up -d
