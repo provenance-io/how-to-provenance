@@ -19,4 +19,4 @@ Simply execute the following command for an interactive suite of examples:
 - Golang: [go-ethereum-hdwallet](https://github.com/miguelmota/go-ethereum-hdwallet)
 - Javascript: [etherum-hdwallet](https://github.com/miguelmota/ethereum-hdwallet)
 - Python: [python-hdwallet](https://github.com/meherett/python-hdwallet)
-- Swift: [HDWallet](https://github.com/essentiaone/HDWallet)
+- Swift: [provwallet-swift](https://github.com/provenance-io/provwallet-swift)

@@ -14,7 +14,7 @@ import io.provenance.hdwallet.wallet.Wallet
 import java.util.UUID
 
 /**
- * Provenance's addresses are in bech32 format.  This example showcases the use of the Wallet class to take a seed value
+ * Provenance Blockchain's addresses are in bech32 format.  This example showcases the use of the Wallet class to take a seed value
  * and derive a bech32 address that might be used in a Provenance blockchain environment.
  */
 object GenerateAddress : ExampleSuite {

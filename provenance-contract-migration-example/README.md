@@ -265,4 +265,4 @@ Well done!  You can now use the `provenanced` client to store, instantiate, exec
 
 Optional:  The execution routes map directly to the `ExecuteMsg` struct in the [msg.rs](src/msg.rs) file.  Additionally, the queries are mapped to the `QueryMsg` struct in that file.  To add a new route, add a new enum variant to these messages, and map its functionality in the [contract.rs](src/contract.rs) file.
 
-Reminder:  The [provenance smart contract tutorial](https://github.com/provenance-io/provwasm/blob/main/docs/tutorial/01-overview.md) contains an in-depth explanation of the inner-workings of a smart contract.  If you're interesting, that's a great place to start building your knowledge, and, more importantly, your own smart contract!
+Reminder:  The [provenance smart contract tutorial](https://github.com/provenance-io/provwasm/blob/main/docs/tutorial/01-overview.md) contains an in-depth explanation of the inner-workings of a smart contract.  If you're interested, that's a great place to start building your knowledge, and, more importantly, your own smart contract!
