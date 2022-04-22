@@ -159,7 +159,7 @@ This command will automatically instantiate the contract with a base name of `ex
 
 The important piece of output in the result from this transaction is the `contract_address` value.  When a contract is instantiated on the Provenance blockchain, it is assigned a bech32 address, and this address can be used to run `execute` and `query` functions against the contract.  To automatically find this value with `jq`, modify the end of the previous comamnd to be: `jq '.logs[] | select(.msg_index == 0) | .events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value'`.
 
-The remaining steps, assume that the contract address has been located by hand or `jq`, and exported to the following variable:
+In the remaining steps, assume that the contract address has been located by hand or `jq`, and exported to the following variable:
 ```sh
 export contract_address=tp1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrs60nkqw
 ```
@@ -209,3 +209,7 @@ Well done! You can now store, instantiate, and communicate with a smart contract
 ## Build your own
 
 Want to build your own smart contract from scratch? The [provwasm](https://github.com/provenance-io/provwasm) repository has an excellent [tutorial](https://github.com/provenance-io/provwasm/blob/main/docs/tutorial/01-overview.md) for building a smart contract repository on the Provenance blockchain.
+
+## Continued  
+
+To learn how to migrate a smart contract to a new version, head over to the [provenance-contract-migration-example](../provenance-contract-migration-example).
