@@ -1,6 +1,7 @@
 package io.provenance.example
 
 import io.provenance.example.examples.ExampleSuite
+import io.provenance.example.examples.ExploreHDPath
 import io.provenance.example.examples.GenerateMnemonic
 import io.provenance.example.examples.GenerateAddress
 import io.provenance.example.examples.Signing
@@ -17,6 +18,7 @@ fun main() {
     println("""
         Provenance HDWallet Examples
         --------------------------------------------------------------------------------------------------------------
+        EXPLORE_HD_PATH:   Example of traversing an HD path to build an address from a mnemonic.
         GENERATE_ADDRESS:  Example of using the Wallet class to derive a bech32 address.
         GENERATE_MNEMONIC: Example of using the MnemonicWords class to generate a mnemonic.
         SIGNING:           Example of using the BCECSigner class to sign a message payload.
@@ -37,6 +39,7 @@ fun main() {
  */
 
 private enum class Examples(val suite: ExampleSuite) {
+    EXPLORE_HD_PATH(suite = ExploreHDPath),
     GENERATE_ADDRESS(suite = GenerateAddress),
     GENERATE_MNEMONIC(suite = GenerateMnemonic),
     SIGNING(suite = Signing),

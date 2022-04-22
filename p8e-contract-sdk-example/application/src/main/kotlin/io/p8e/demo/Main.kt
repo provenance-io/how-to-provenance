@@ -29,19 +29,28 @@ import java.net.URI
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-// data class for hydrating
+/**
+ * Data class for hydrating.
+ */
 data class Loan(
     @Record("loan") val loan: LoanData.Loan,
     @Record("servicer") val servicer: LoanData.Servicer
 )
 
-// grpc connection to provenance blockchain
+/**
+ * A GRPC client instance that connects to a local Provennace Blockchain instance.
+ */
 val pbcClient = PbClient("chain-local", URI("grpc://localhost:9090"), GasEstimationMethod.MSG_FEE_CALCULATION)
 
 // sdk client for contract execution and object store interactions
+/**
+ * Builds a WalletSigner instance from a specified NetworkType, using the correct hrp (human-readable-prefix) of tp
+ * for Provenance Blockchain testnet accounts, and the correct HD (hierarchical deterministic) path.
+ * Uses a default mnemonic value to ensure that the address used across all executions remains constant.
+ */
 private val signer = fromMnemonic(
-    NetworkType("tp", "m/44'/1'/0'/0/0"),
-    "stable payment cliff fault abuse clinic bus belt film then forward world goose bring picnic rich special brush basic lamp window coral worry change"
+    networkType = NetworkType(prefix = "tp", path = "m/44'/1'/0'/0/0"),
+    mnemonic = "stable payment cliff fault abuse clinic bus belt film then forward world goose bring picnic rich special brush basic lamp window coral worry change"
 )
 private val encryptionPrivateKey = "0A2100EF4A9391903BFE252CB240DA6695BC5F680A74A8E16BEBA003833DFE9B18C147".toJavaPrivateKey()
 private val signingPrivateKey = "0A2100EF4A9391903BFE252CB240DA6695BC5F680A74A8E16BEBA003833DFE9B18C147".toJavaPrivateKey()
@@ -59,7 +68,9 @@ private val config = ClientConfig(
 )
 val sdkClient = Client(SharedClient(config = config), affiliate)
 
-// execute the contract and send to PBC
+/**
+ * Execute the contract and send to PBC.
+ */
 fun executeContractAndSendAsTx(session: Session): ServiceOuterClass.BroadcastTxResponse =
     (sdkClient.execute(session) as SignedResult).let { executionResult ->
         val messages = executionResult.messages.map { Any.pack(it, "") }
@@ -72,12 +83,16 @@ fun executeContractAndSendAsTx(session: Session): ServiceOuterClass.BroadcastTxR
         )
     }
 
-// get the error message, if a tx has failed
+/**
+ * Parses an error message from a TxResponse, if a tx has failed.
+ */
 fun Abci.TxResponse.getError(): String =
     logsList.filter { it.log.isNotBlank() }.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.log }
         ?: rawLog
 
-// fetch the scope from PBC
+/**
+ * Fetches the scope from PBC.
+ */
 fun loadScope(scopeUuid: UUID): ScopeResponse =
     scopeRequest {
         scopeId = scopeUuid.toString()
@@ -87,7 +102,9 @@ fun loadScope(scopeUuid: UUID): ScopeResponse =
         pbcClient.metadataClient.withDeadlineAfter(10, TimeUnit.SECONDS).scope(request)
     }
 
-// hydrate data from object store
+/**
+ * Hydrates data from a scope to object store.
+ */
 fun hydrateLoan(scopeUuid: UUID): Loan =
     loadScope(scopeUuid).let { scope -> sdkClient.hydrate(Loan::class.java, scope) }
 
