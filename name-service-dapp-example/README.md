@@ -6,7 +6,7 @@ a backend application can be in the mix, but that is beyond the scope of this pa
 
 The [contract](./contract/) directory contains the smart contract that this frontend utilizes, however the example will
 connect to the Provenance Blockchain testnet and utilize a smart contract instance already initialized there, as transaction
-signing will be facilitated by the Provenance Wallet, and setting that up to communicate with a local node is outside
+signing will be facilitated by the Provenance Wallet (to be publicly available soon), and setting that up to communicate with a local node is outside
 the scope of this example.
 
 ## Features
@@ -16,7 +16,7 @@ bound to an account can also be resolved by the account address. Additionally, t
 match.
 
 The frontend (React UI) for this example provides a simple web interface exposing the smart contract functionality for:
-* Registering names with your account (via transactions you will sign using the Provenance Wallet)
+* Registering names with your account (via transactions you will sign using the Provenance Wallet [to be publicly available soon])
 * Resolving the address bound to a name
 * Listing all names bound to an address
 * Searching for names via a partial match
