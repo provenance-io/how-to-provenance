@@ -2,6 +2,8 @@
 
 Welcome to the 'How To Provenance' repository, where you can find examples of Provenance Blockchain usage, Provenance Blockchain smart contract development, Provenance Blockchain application development and related topics.
 
+The Provenance Blockchain Foundation is always eager for contributors.  If you have an idea not covered by these examples, we want to hear about it!  Love our software and want to contribute new functionality?  Make a proposal through our [Grants Program](https://provenance.io/grants)!
+
 ## Index
 1. [Authz Example](authz-example): (Kotlin/Gradle) Use the blockchain [Authz Module](https://docs.cosmos.network/master/modules/authz) to grant privileges from one account to another, including delegated signing and fee allowances.
 2. [Bilateral Trade Example](bilateral-trade-example): (Rust/Cargo) Execute a smart contract that trades coins between two parties, demonstrating a complete transfer of funds without the need for another intermediary entity.
