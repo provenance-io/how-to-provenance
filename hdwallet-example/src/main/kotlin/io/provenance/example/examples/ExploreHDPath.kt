@@ -81,8 +81,9 @@ object ExploreHDPath : ExampleSuite {
                            way to go "back up" the path.
             
             *Provenance Testnet Path: m/44'/1'/0'/0/0'
-                                      Notice that the index is hardened?  Provenance hardens this level when it creates
-                                      custodial accounts on the behalf of users for extra security.
+                                      Notice that the index is hardened?  Provenance Blockchain uses a hardened index in
+                                      its testnet addresses as a standard.  Above, you can see the mainnet address path
+                                      does not have a hardened index.
                                       
             Well, what are we waiting for?  Let's make a Provenance Blockchain path!
             -------------------------------------------------------------------------------------------------------------------------------
