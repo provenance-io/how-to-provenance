@@ -126,9 +126,11 @@ object FeeGrantExample : ExampleSuite {
                     validate = { namePrefix -> namePrefix.all { it.isLetter() } },
                     validationRuleText = listOf("Input must be alphabetical characters only")
                 ),
-                // The name "pio" is created unrestricted on local instances.  If using testnet or another instance,
-                // be sure to use an unrestricted name, or execution will fail when attempting to find the parent address
-                // owner of the restricted name as a signer
+                // The name "pio" is created unrestricted on local instances when your local instance is created
+                // via 'make localnet-start'.  Check your genesis.json file if you are running locally to
+                // select a name which is not restricted.  If you try to extend a restricted name, 
+                // execution will fail when attempting to find the parent address
+                // owner of the restricted name as a signer.
                 default = DefaultParam("pio"),
             )
         )
