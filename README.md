@@ -14,6 +14,7 @@ The Provenance Blockchain Foundation is always eager for contributors.  If you h
 7. [Provenance Smart Contract Example](provenance-smart-contract-example): (Rust/Cargo) Store and instantite a smart contract on the [Provenance Blockchain](https://github.com/provenance-io/provenance) written in Rust. Uses the [provwasm library](https://github.com/provenance-io/provwasm) to do Provenance Blockchain interactions, like using the [name module](https://docs.provenance.io/modules/name-module) and adding [attributes](https://docs.provenance.io/modules/account) to persist data directly on the blockchain.
 8. [Provenance Contract Migration Example](provenance-contract-migration-example): (Rust/Cargo) Migrate the code of an existing smart contract on the Provenance Blockchain to a new version.  A continuation of the [Provenance Smart Contract Example](provenance-smart-contract-example).
 9. [Name Service dApp](name-service-dapp-example): Run a simple dApp that registers human-readable names to an account using a smart contract, the Provenance Wallet (to be publicly available soon) and a [React](reactjs.org) frontend (no backend other than the blockchain itself)
+10. [Provenance AWS Validator](https://github.com/provenance-io/aws-validator): Run a Provenance Validator on Amazon Web Services. Leverages AWS Nitro Enclaves for secure key usage.
 
 ## Examples: Ordered by Domain Knowledge
 
