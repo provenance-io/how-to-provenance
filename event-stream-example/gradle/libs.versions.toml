@@ -1,5 +1,5 @@
 [versions]
-provenanceEventStream = "0.6.0-rc7"
+provenanceEventStream = "0.6.0"
 kotlinCoroutines = "1.5.2"
 scarlet = "0.1.12"
 kafka = "3.1.0"

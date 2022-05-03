@@ -3,8 +3,8 @@ package io.provenance.example
 import io.provenance.eventstream.decoder.moshiDecoderAdapter
 import io.provenance.eventstream.extensions.decodeBase64
 import io.provenance.eventstream.net.okHttpNetAdapter
-import io.provenance.eventstream.stream.flows.blockFlow
-import io.provenance.eventstream.stream.flows.liveBlockFlow
+import io.provenance.eventstream.stream.flows.blockDataFlow
+import io.provenance.eventstream.stream.flows.pollingBlockDataFlow
 import io.provenance.eventstream.stream.kafkaBlockSink
 import io.provenance.eventstream.stream.kafkaBlockSource
 import io.provenance.eventstream.stream.models.StreamBlockImpl
@@ -19,11 +19,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 
 suspend fun main() {
@@ -71,8 +69,8 @@ suspend fun startProducer(kafkaServers: String, topicName: String) {
 
     // initialize the event stream flow
     when (startingBlockHeight) {
-        null -> liveBlockFlow(netAdapter, decoderAdapter) // no starting height, listen for live blocks
-        else -> blockFlow(netAdapter, decoderAdapter, from = startingBlockHeight) // starting height provided, use combined historical/live flow
+        null -> pollingBlockDataFlow(netAdapter) // no starting height, listen for live blocks via polling strategy
+        else -> blockDataFlow(netAdapter, decoderAdapter, from = startingBlockHeight) // starting height provided, use combined historical/live flow
     }.onEach { blockData ->
         // we have received a block, drop it in the KafkaBlockSink
         println("Sending block to kafka topic (height: ${blockData.height})")

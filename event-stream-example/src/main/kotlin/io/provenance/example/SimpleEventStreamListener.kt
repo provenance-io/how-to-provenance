@@ -3,15 +3,12 @@ package io.provenance.example
 import io.provenance.eventstream.decoder.moshiDecoderAdapter
 import io.provenance.eventstream.extensions.decodeBase64
 import io.provenance.eventstream.net.okHttpNetAdapter
-import io.provenance.eventstream.stream.flows.blockFlow
-import io.provenance.eventstream.stream.flows.liveBlockFlow
-import io.provenance.eventstream.stream.models.extensions.blockEvents
+import io.provenance.eventstream.stream.flows.blockDataFlow
+import io.provenance.eventstream.stream.flows.pollingBlockDataFlow
 import io.provenance.eventstream.stream.models.extensions.dateTime
 import io.provenance.eventstream.stream.models.extensions.txData
 import io.provenance.eventstream.stream.models.extensions.txEvents
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.runBlocking
 
 val EVENTS = listOf("wasm")
 
@@ -32,8 +29,8 @@ suspend fun main() {
 
     // initialize the event stream flow
     when (startingBlockHeight) {
-        null -> liveBlockFlow(netAdapter, decoderAdapter) // no starting height, listen for live blocks
-        else -> blockFlow(netAdapter, decoderAdapter, from = startingBlockHeight) // starting height provided, use combined historical/live flow
+        null -> pollingBlockDataFlow(netAdapter) // no starting height, listen for live blocks via polling strategy
+        else -> blockDataFlow(netAdapter, decoderAdapter, from = startingBlockHeight) // starting height provided, use combined historical/live flow
     }.collect { blockData ->
         blockData.blockResult.txEvents(blockData.block.dateTime()) { index -> blockData.block.txData(index) }
             .filter { txEvent -> txEvent.eventType in EVENTS } // filter out events you are not looking for
