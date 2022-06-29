@@ -107,8 +107,8 @@ fun main() {
     // execute the match between the supplied bid/ask as the contract admin. Note that only the admin has the privileges
     // to execute the match, though all they are doing is supplying two ids and the validation of the match
     // will still happen within the contract
-    println("Please enter the contract admin mnemonic:")
-    val adminMnemonic = readLine()!!
+    // This mnemonic is the manager of the test contract added to testnet for the purposes of this example
+    val adminMnemonic = "forest hospital six barely eager talent olive bicycle love attitude match job front access armor brick volcano control write pulse wonder family never youth"
 
     val adminSigner = WalletSigner(NetworkType.TESTNET, adminMnemonic)
     val adminAccount = client.authClient.getBaseAccount(adminSigner.address())
