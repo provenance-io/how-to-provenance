@@ -59,9 +59,10 @@ To interact with the Provenance blockchain, Provenance has developed a commandli
 
 - Navigate to the `provenance` directory that you installed in the prerequisites section.
 
-- Ensure the `main` branch is checked out.  The command: `git rev-parse --abbrev-ref HEAD` should print `main`.  If it does not, simply run:
+- Ensure the `v1.10.0` tag is checked out, which produces the latest stable localnet from the repository.  To check out
+the tag, run:
 ```sh
-git checkout main
+git checkout v1.10.0
 ```
 
 - Install the `provenanced` command.  Run the following command from the root of the `provenance` directory:
@@ -69,7 +70,7 @@ git checkout main
 make install
 ```
 
-- Verify that `provenanced` is installed.  Running `provenanced version` should produce something like: `main-<commit-hash>`.
+- Verify that `provenanced` is installed.  Running `provenanced version` should produce something like: `v1.10.0`.
 
 Woot! You now have a way to interact with Provenance, and you have a WASM that's ready to install!
 
@@ -90,19 +91,19 @@ Creating node0 ... done
 Creating node1 ... done
 Creating node3 ... done
 Creating node2 ... done
-``` 
+```
 
 - Check that your localnet is running correctly by displaying the node0 address. Run the following command:
 ```sh
 provenanced keys show -a node0 --home build/node0 --testnet
-``` 
+```
 If everything is running correctly, you should see a bech32 address, like: `tp13gzxe0cyqp70uedjrqhau2w93cjw8zr4ju4c95`.  Excellent!
 
 ### Step #4: Store the Smart Contract
 - For simplicity's sake, this example will use the `node0` address to manage the smart contract and do executions.  Use the previous step's (#3) command to store the address in a variable for re-use:
 ```sh
 export node0=$(provenanced keys show -a node0 --home build/node0 --testnet)
-``` 
+```
 
 - From the `provenance` directory, run the following command to store your smart contract. Note:  This uses the `artifacts` directory from Step #1 when the WASM was generated.
 ```sh
@@ -119,7 +120,7 @@ provenanced tx wasm store my/path/to/how-to-provenance/provenance-smart-contract
 --output json \
 --yes | jq
 ```
-This command will automatically store the generated smart contract on your localnet.  Note: This uses the `--yes` flag, which will automatically run the transaction after verification that it is without errors.  To initiate a manual-confirmation mode, simply omit the `--yes` flag.  
+This command will automatically store the generated smart contract on your localnet.  Note: This uses the `--yes` flag, which will automatically run the transaction after verification that it is without errors.  To initiate a manual-confirmation mode, simply omit the `--yes` flag.
 
 The resulting output is piped to `jq`, which makes it much more presentable.  Within the payload, look for the `code_id` value.  The code id is used as a reference point when instantiating the smart contract.  If you have followed this guide from a clean setup, the `code_id` value should be `1` because no other smart contracts have been stored on your localnet.  To automatically find this value with `jq`, modify the end of the command to be: `jq -r '.logs[] | select(.msg_index == 0) | .events[] | select(.type == "store_code") | .attributes[0].value'`.
 
@@ -202,7 +203,7 @@ The query should yield the following payload:
 }
 ```
 
-That math looks good to me! 
+That math looks good to me!
 
 Well done! You can now store, instantiate, and communicate with a smart contract on the Provenance blockchain!
 
@@ -210,6 +211,6 @@ Well done! You can now store, instantiate, and communicate with a smart contract
 
 Want to build your own smart contract from scratch? The [provwasm](https://github.com/provenance-io/provwasm) repository has an excellent [tutorial](https://github.com/provenance-io/provwasm/blob/main/docs/tutorial/01-overview.md) for building a smart contract repository on the Provenance blockchain.
 
-## Continued  
+## Continued
 
 To learn how to migrate a smart contract to a new version, head over to the [provenance-contract-migration-example](../provenance-contract-migration-example).
