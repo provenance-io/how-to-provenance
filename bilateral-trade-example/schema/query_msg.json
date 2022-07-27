@@ -1,8 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "QueryMsg",
+  "description": "Fetches data from the smart contract.  No query routes make changes to blockchain data.",
   "anyOf": [
     {
+      "description": "Fetches an existing AskOrder from contract storage.",
       "type": "object",
       "required": [
         "get_ask"
@@ -15,6 +17,7 @@
           ],
           "properties": {
             "id": {
+              "description": "The unique identifier of the AskOrder to fetch.  If no order exists in storage for the given id, an error will be returned.",
               "type": "string"
             }
           }
@@ -23,6 +26,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Fetches an existing BidOrder from contract storage.",
       "type": "object",
       "required": [
         "get_bid"
@@ -35,6 +39,7 @@
           ],
           "properties": {
             "id": {
+              "description": "The unique identifier of the BidOrder to fetch.  If no order exists in storage for the given id, an error will be returned.",
               "type": "string"
             }
           }
@@ -43,6 +48,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Fetches the ContractInfo from contract storage.  This value is created as part of the instantiation process, so this query should only ever fail if the blockchain is experiencing downtime.",
       "type": "object",
       "required": [
         "get_contract_info"

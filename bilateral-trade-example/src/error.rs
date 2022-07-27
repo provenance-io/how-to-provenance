@@ -40,4 +40,7 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Cannot send funds when updating fees")]
+    UpdateFeesWithFunds {},
 }

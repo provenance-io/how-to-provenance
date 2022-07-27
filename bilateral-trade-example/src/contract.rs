@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, coin, entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdResult, Timestamp,
+    MessageInfo, Response, StdResult, Timestamp, Uint128,
 };
 use provwasm_std::{
     assess_custom_fee, bind_name, write_scope, NameBinding, Party, PartyType, ProvenanceMsg,
@@ -109,6 +109,7 @@ pub fn execute(
         } => create_bid(deps, env, info, id, base, effective_time),
         ExecuteMsg::CancelAsk { id } => cancel_ask(deps, env, info, id),
         ExecuteMsg::CancelBid { id } => cancel_bid(deps, env, info, id),
+        ExecuteMsg::UpdateFees { ask_fee, bid_fee } => update_fees(deps, info, ask_fee, bid_fee),
         ExecuteMsg::ExecuteMatch { ask_id, bid_id } => {
             execute_match(deps, env, info, ask_id, bid_id)
         }
@@ -410,6 +411,57 @@ fn cancel_bid(
     }
 }
 
+fn update_fees(
+    deps: DepsMut<ProvenanceQuery>,
+    info: MessageInfo,
+    ask_fee: Option<Uint128>,
+    bid_fee: Option<Uint128>,
+) -> Result<Response<ProvenanceMsg>, ContractError> {
+    let mut contract_info = get_contract_info(deps.storage)?;
+    // Prevent any users beside the admin from executing this route
+    if info.sender != contract_info.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+    // Prevent funds from accidentally being escrowed in the contract
+    if !info.funds.is_empty() {
+        return Err(ContractError::UpdateFeesWithFunds {});
+    }
+    // An ask fee of zero is invalid, but omitting the ask fee (None) is valid because it indicates
+    // no fee is to be charged
+    if ask_fee.is_some() && ask_fee.unwrap().is_zero() {
+        return Err(ContractError::InvalidFee {
+            fee_type: "ask".to_string(),
+        });
+    }
+    // A bid fee of zero is invalid, but omitting the bid fee (None) is valid because it indicates
+    // no fee is to be charged
+    if bid_fee.is_some() && bid_fee.unwrap().is_zero() {
+        return Err(ContractError::InvalidFee {
+            fee_type: "bid".to_string(),
+        });
+    }
+    // Format the ask and bid fee output messages up front before declaring the response, allowing
+    // for the ask fee and bid fee to be moved into the contract_info and avoiding errors
+    let ask_fee_message = if let Some(ref ask_fee) = &ask_fee {
+        format!("{}nhash", ask_fee.u128())
+    } else {
+        "cleared".to_string()
+    };
+    let bid_fee_message = if let Some(ref bid_fee) = &bid_fee {
+        format!("{}nhash", bid_fee.u128())
+    } else {
+        "cleared".to_string()
+    };
+    // Overwrite the ask and bid fees in the contract info and save the new result
+    contract_info.ask_fee = ask_fee;
+    contract_info.bid_fee = bid_fee;
+    set_contract_info(deps.storage, &contract_info)?;
+    Ok(Response::new()
+        .add_attribute("action", "update_fees")
+        .add_attribute("new_ask_fee", ask_fee_message)
+        .add_attribute("new_bid_fee", bid_fee_message))
+}
+
 // match and execute an ask and bid order
 // this allows for the atomic transfer of the bid funds to the seller and the quote asset (coin/scope) to the bidder,
 // ensuring neither party has chance to back out of the deal after a partial transfer
@@ -624,7 +676,7 @@ fn migrate_new_version(deps: DepsMut<ProvenanceQuery>) -> Result<Response, Contr
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{coin, coins, Addr, BankMsg};
+    use cosmwasm_std::{coin, coins, Addr, BankMsg, StdError};
     use cosmwasm_std::{CosmosMsg, Uint128};
     use provwasm_mocks::mock_dependencies;
     use provwasm_std::{
@@ -2262,6 +2314,114 @@ mod tests {
         );
 
         assert_eq!(query_bid_response, to_binary(&bid_order));
+    }
+
+    #[test]
+    fn test_update_fees_with_valid_data() {
+        let mut deps = mock_dependencies(&[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("contract_admin", &[]),
+            InstantiateMsg {
+                bind_name: "examples.sc.pb".to_string(),
+                contract_name: "contract_name".to_string(),
+                ask_fee: None,
+                bid_fee: None,
+            },
+        )
+        .unwrap();
+        let contract_info = get_contract_info(deps.as_ref().storage).unwrap();
+        assert_eq!(None, contract_info.ask_fee);
+        assert_eq!(None, contract_info.bid_fee);
+        let response = update_fees(
+            deps.as_mut(),
+            mock_info("contract_admin", &[]),
+            Some(Uint128::new(10)),
+            Some(Uint128::new(15)),
+        )
+        .expect("updating fees should be successful");
+        assert!(response.messages.is_empty());
+        assert_eq!(3, response.attributes.len());
+        assert_eq!(attr("action", "update_fees"), response.attributes[0]);
+        assert_eq!(attr("new_ask_fee", "10nhash"), response.attributes[1]);
+        assert_eq!(attr("new_bid_fee", "15nhash"), response.attributes[2]);
+        let response = update_fees(deps.as_mut(), mock_info("contract_admin", &[]), None, None)
+            .expect("clearing fees should be successful");
+        assert!(response.messages.is_empty());
+        assert_eq!(3, response.attributes.len());
+        assert_eq!(attr("action", "update_fees"), response.attributes[0]);
+        assert_eq!(attr("new_ask_fee", "cleared"), response.attributes[1]);
+        assert_eq!(attr("new_bid_fee", "cleared"), response.attributes[2]);
+    }
+
+    #[test]
+    fn test_update_fees_with_invalid_data() {
+        let mut deps = mock_dependencies(&[]);
+        let err = update_fees(deps.as_mut(), mock_info("contract_admin", &[]), None, None)
+            .expect_err("an error should occur when no contract info exists");
+        assert!(
+            matches!(err, ContractError::Std(StdError::NotFound { .. })),
+            "a not found error should occur when contract info does not exist, but got: {:?}",
+            err,
+        );
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("contract_admin", &[]),
+            InstantiateMsg {
+                bind_name: "examples.sc.pb".to_string(),
+                contract_name: "contract_name".to_string(),
+                ask_fee: None,
+                bid_fee: None,
+            },
+        )
+        .unwrap();
+        let err = update_fees(deps.as_mut(), mock_info("not_admin", &[]), None, None)
+            .expect_err("an error should occur when a non-admin attempts to update fees");
+        assert!(
+            matches!(err, ContractError::Unauthorized {}),
+            "an unauthorized error should occur when a non-admin attempts to update fees, but got: {:?}",
+            err,
+        );
+        let err = update_fees(
+            deps.as_mut(),
+            mock_info("contract_admin", &coins(1000, "nhash")),
+            None,
+            None,
+        )
+        .expect_err("an error should occur when the admin provides funds");
+        assert!(
+            matches!(err, ContractError::UpdateFeesWithFunds {}),
+            "an update fees with funds error should occur, but got: {:?}",
+            err,
+        );
+        let err = update_fees(
+            deps.as_mut(),
+            mock_info("contract_admin", &[]),
+            Some(Uint128::zero()),
+            None,
+        )
+        .expect_err("an error should occur when the ask fee is zero");
+        match err {
+            ContractError::InvalidFee { fee_type } => {
+                assert_eq!("ask", fee_type);
+            }
+            e => panic!("unexpected error when ask fee is zero: {:?}", e),
+        };
+        let err = update_fees(
+            deps.as_mut(),
+            mock_info("contract_admin", &[]),
+            None,
+            Some(Uint128::zero()),
+        )
+        .expect_err("an error should occur when the bid fee is zero");
+        match err {
+            ContractError::InvalidFee { fee_type } => {
+                assert_eq!("bid", fee_type);
+            }
+            e => panic!("unexpected error when the bid fee is zero: {:?}", e),
+        };
     }
 
     fn handle_expected_coin<A: FnOnce(&Vec<Coin>) -> ()>(base_type: &BaseType, action: A) {

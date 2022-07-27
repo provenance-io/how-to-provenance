@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "InstantiateMsg",
+  "description": "Constructs a new instance of the smart contract.",
   "type": "object",
   "required": [
     "bind_name",
@@ -8,6 +9,7 @@
   ],
   "properties": {
     "ask_fee": {
+      "description": "An amount to be charged to the sender when an ask is created.  This uses the Provenance Blockchain Fee Module, which will take 50% of the fees sent and redistribute them to various external entities.  The other 50% will be retained and sent to the contract's admin account.",
       "anyOf": [
         {
           "$ref": "#/definitions/Uint128"
@@ -18,6 +20,7 @@
       ]
     },
     "bid_fee": {
+      "description": "An amount to be charged to the sender when a bid is created.  This uses the Provenance Blockchain Fee Module, which will take 50% of the fees sent and redistribute them to various external entities.  The other 50% will be retained and sent to the contract's admin account.",
       "anyOf": [
         {
           "$ref": "#/definitions/Uint128"
@@ -28,9 +31,11 @@
       ]
     },
     "bind_name": {
+      "description": "A name that will be bound to the smart contract using the Provenance Blockchain Name Module. This name must be unrestricted, or a failure will occur.  Note: The Provenance Blockchain provides a parent name, \"sc.pb\" on both testnet and mainnet that is unrestricted, specifically for binding smart contracts on instantiation.",
       "type": "string"
     },
     "contract_name": {
+      "description": "A free-form name for the smart contract, purely for description and display purposes.",
       "type": "string"
     }
   },

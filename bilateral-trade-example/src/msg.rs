@@ -65,6 +65,18 @@ pub enum ExecuteMsg {
         /// An optional timestamp denoting when the bid was created.
         effective_time: Option<Timestamp>,
     },
+    /// Changes the contract's fees to the specified values.  Only the contract's admin account can
+    /// execute this route.
+    UpdateFees {
+        /// The new value to charge the sender when asks are created.  If this value is omitted,
+        /// the value in contract storage will be cleared.  Providing zero or a negative value will
+        /// produce an error.
+        ask_fee: Option<Uint128>,
+        /// The new value to charge the sender when bids are created.  If this value is omitted,
+        /// the value in contract storage will be cleared.  Providing zero or a negative value will
+        /// produce an error.
+        bid_fee: Option<Uint128>,
+    },
     /// Attempts to match an AskOrder with a BidOrder, performing an exchange of the asker's base
     /// with the bidder's quote.  This will only be successful if the bidder's base matches the
     /// asker's base, and the asker's quote matches the bidder's quote.

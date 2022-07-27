@@ -16,10 +16,6 @@ import io.provenance.hdwallet.common.hashing.sha256
 import io.provenance.hdwallet.signer.BCECSigner
 import io.provenance.hdwallet.wallet.Account
 import io.provenance.hdwallet.wallet.Wallet
-import io.provenance.metadata.v1.MsgWriteScopeRequest
-import io.provenance.metadata.v1.Party
-import io.provenance.metadata.v1.PartyType
-import io.provenance.metadata.v1.ScopeRequest
 import java.net.URI
 import java.util.UUID
 

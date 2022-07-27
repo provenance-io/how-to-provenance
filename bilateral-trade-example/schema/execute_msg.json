@@ -1,8 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ExecuteMsg",
+  "description": "Executes the smart contract, causing changes reflected in Provenance Blockchain transactions.",
   "anyOf": [
     {
+      "description": "Removes an ask from the contract's storage and refunds the base (Provenance Blockchain Metadata Scope or Coin).  Ask creation fees are not refunded.",
       "type": "object",
       "required": [
         "cancel_ask"
@@ -15,6 +17,7 @@
           ],
           "properties": {
             "id": {
+              "description": "The unique identifier for the ask to cancel.  If no ask with this value exists in contract storage, an error will be returned.",
               "type": "string"
             }
           }
@@ -23,6 +26,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Removes a bid from the contract's storage and refunds the quote funds provided.  Bid creation fees are not refunded.",
       "type": "object",
       "required": [
         "cancel_bid"
@@ -35,6 +39,7 @@
           ],
           "properties": {
             "id": {
+              "description": "The unique identifier for the bid to cancel.  If no bid with this value exists in contract storage, an error will be returned.",
               "type": "string"
             }
           }
@@ -43,6 +48,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Creates a new AskOrder, holding the given base Coin or Provenance Blockchain Metadata Scope in the smart contract until a cancellation occurs or a match is made.",
       "type": "object",
       "required": [
         "create_ask"
@@ -56,15 +62,18 @@
           ],
           "properties": {
             "id": {
+              "description": "The unique identifier for the new ask to create.  If an ask already exists with the given id, an error will be returned.",
               "type": "string"
             },
             "quote": {
+              "description": "The funds that a bidder must provide for a match to be successfully executed.",
               "type": "array",
               "items": {
                 "$ref": "#/definitions/Coin"
               }
             },
             "scope_address": {
+              "description": "The address of a scope to list for trade.  If this value is omitted, funds must be provided in the execute message transaction.",
               "type": [
                 "string",
                 "null"
@@ -76,6 +85,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Creates a new BidOrder, holding the given quote Coin in the smart contract until a cancellation occurs or a match is made.",
       "type": "object",
       "required": [
         "create_bid"
@@ -89,9 +99,15 @@
           ],
           "properties": {
             "base": {
-              "$ref": "#/definitions/BaseType"
+              "description": "Indicates the type of exchange that will be made: scope or coin.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/BaseType"
+                }
+              ]
             },
             "effective_time": {
+              "description": "An optional timestamp denoting when the bid was created.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Timestamp"
@@ -102,6 +118,7 @@
               ]
             },
             "id": {
+              "description": "The unique identifier for the new bid to create.  If a bid already exists with the given id, an error will be returned.",
               "type": "string"
             }
           }
@@ -110,6 +127,44 @@
       "additionalProperties": false
     },
     {
+      "description": "Changes the contract's fees to the specified values.  Only the contract's admin account can execute this route.",
+      "type": "object",
+      "required": [
+        "update_fees"
+      ],
+      "properties": {
+        "update_fees": {
+          "type": "object",
+          "properties": {
+            "ask_fee": {
+              "description": "The new value to charge the sender when asks are created.  If this value is omitted, the value in contract storage will be cleared.  Providing zero or a negative value will produce an error.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "bid_fee": {
+              "description": "The new value to charge the sender when bids are created.  If this value is omitted, the value in contract storage will be cleared.  Providing zero or a negative value will produce an error.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Attempts to match an AskOrder with a BidOrder, performing an exchange of the asker's base with the bidder's quote.  This will only be successful if the bidder's base matches the asker's base, and the asker's quote matches the bidder's quote.",
       "type": "object",
       "required": [
         "execute_match"
@@ -123,9 +178,11 @@
           ],
           "properties": {
             "ask_id": {
+              "description": "The unique identifier of the ask to attempt a match on.  If no ask exists within the contract storage with this id, an error will be returned.",
               "type": "string"
             },
             "bid_id": {
+              "description": "The unique identifier of the bid to attempt a match on.  If no bid exists within the contract storage with this id, an error will be returned.",
               "type": "string"
             }
           }
