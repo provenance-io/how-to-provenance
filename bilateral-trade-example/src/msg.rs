@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin, Timestamp};
+use cosmwasm_std::{Coin, Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +8,8 @@ use crate::state::BaseType;
 pub struct InstantiateMsg {
     pub bind_name: String,
     pub contract_name: String,
+    pub ask_fee: Option<Uint128>,
+    pub bid_fee: Option<Uint128>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

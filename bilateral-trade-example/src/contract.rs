@@ -1,11 +1,12 @@
 use cosmwasm_std::{
-    attr, entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    attr, coin, entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
     MessageInfo, Response, StdResult, Timestamp,
 };
 use provwasm_std::{
-    bind_name, write_scope, NameBinding, Party, PartyType, ProvenanceMsg, ProvenanceQuerier,
-    ProvenanceQuery, Scope,
+    assess_custom_fee, bind_name, write_scope, NameBinding, Party, PartyType, ProvenanceMsg,
+    ProvenanceQuerier, ProvenanceQuery, Scope,
 };
+use thiserror::private::DisplayAsDisplay;
 
 use crate::contract_info::{get_contract_info, set_contract_info, ContractInfo, CONTRACT_VERSION};
 use crate::error::ContractError;
@@ -40,8 +41,30 @@ pub fn instantiate(
         });
     }
 
+    // An ask fee of zero is invalid, but omitting the ask fee (None) is valid because it indicates
+    // no fee is to be charged
+    if msg.ask_fee.is_some() && msg.ask_fee.unwrap().is_zero() {
+        return Err(ContractError::InvalidFee {
+            fee_type: "ask".to_string(),
+        });
+    }
+
+    // A bid fee of zero is invalid, but omitting the bid fee (None) is valid because it indicates
+    // no fee is to be charged
+    if msg.bid_fee.is_some() && msg.bid_fee.unwrap().is_zero() {
+        return Err(ContractError::InvalidFee {
+            fee_type: "bid".to_string(),
+        });
+    }
+
     // set contract info
-    let contract_info = ContractInfo::new(info.sender, msg.bind_name, msg.contract_name);
+    let contract_info = ContractInfo::new(
+        info.sender,
+        msg.bind_name,
+        msg.contract_name,
+        msg.ask_fee,
+        msg.bid_fee,
+    );
     set_contract_info(deps.storage, &contract_info)?;
 
     // create name binding provenance message
@@ -83,7 +106,7 @@ pub fn execute(
             id,
             base,
             effective_time,
-        } => create_bid(deps, info, id, base, effective_time),
+        } => create_bid(deps, env, info, id, base, effective_time),
         ExecuteMsg::CancelAsk { id } => cancel_ask(deps, env, info, id),
         ExecuteMsg::CancelBid { id } => cancel_bid(deps, env, info, id),
         ExecuteMsg::ExecuteMatch { ask_id, bid_id } => {
@@ -153,10 +176,26 @@ fn create_ask(
     // key the ask by id to allow for lookup by id later
     ask_storage.save(ask_order.id.as_bytes(), &ask_order)?;
 
-    Ok(Response::new()
+    let mut response = Response::new()
         // anything watching the event stream could see an event from this contract with this attribute, and then act on it if desired
-        .add_attributes(vec![attr("action", "create_ask")])
-        .set_data(to_binary(&ask_order)?))
+        .add_attribute("action", "create_ask")
+        .set_data(to_binary(&ask_order)?);
+
+    let contract_info = get_contract_info(deps.storage)?;
+
+    // Only generate an ask fee message if it is configured within the contract info
+    if let Some(ref ask_fee) = &contract_info.ask_fee {
+        response = response
+            .add_attribute("fee_charged", format!("{}nhash", ask_fee.as_display()))
+            .add_message(generate_creation_fee(
+                ask_fee.u128(),
+                "Ask",
+                env.contract.address,
+                contract_info.admin,
+            )?);
+    }
+
+    Ok(response)
 }
 
 // create bid entrypoint
@@ -167,6 +206,7 @@ fn create_ask(
 // this bid is cancelled.
 fn create_bid(
     deps: DepsMut<ProvenanceQuery>,
+    env: Env,
     info: MessageInfo,
     id: String,
     base: BaseType,
@@ -205,10 +245,54 @@ fn create_bid(
     // key the bid by id so it can be retrieved as such later
     bid_storage.save(bid_order.id.as_bytes(), &bid_order)?;
 
-    Ok(Response::new()
+    let mut response = Response::new()
         // anything watching the event stream could see an event from this contract with this attribute, and then act on it if desired
         .add_attributes(vec![attr("action", "create_bid")])
-        .set_data(to_binary(&bid_order)?))
+        .set_data(to_binary(&bid_order)?);
+
+    let contract_info = get_contract_info(deps.storage)?;
+
+    // Only generate a bid fee message if it is configured within the contract info
+    if let Some(ref bid_fee) = &contract_info.bid_fee {
+        response = response
+            .add_attribute("fee_charged", format!("{}nhash", bid_fee.as_display()))
+            .add_message(generate_creation_fee(
+                bid_fee.u128(),
+                "Bid",
+                env.contract.address,
+                contract_info.admin,
+            )?);
+    }
+
+    Ok(response)
+}
+
+fn generate_creation_fee<S: Into<String>>(
+    fee_amount: u128,
+    fee_type: S,
+    contract_address: Addr,
+    admin_address: Addr,
+) -> Result<CosmosMsg<ProvenanceMsg>, ContractError> {
+    Ok(assess_custom_fee(
+        // Custom fees must either use nhash or usd as the denom.  This example uses nhash,
+        // because the fee is intended to ensure the admin has enough funds to execute matches
+        // in a sustainable manner (aka no account reloading to keep the admin functional)
+        coin(fee_amount, "nhash"),
+        // The custom fee name is free-form text and displays in the Provenance Blockchain Wallet
+        // when the fee is added to the contract dispatch
+        Some(format!("{} creation fee", fee_type.into())),
+        // The contract address must always be specified in the "from" field.  This is due to
+        // the fact that smart contracts can only ever execute messages that they sign for.
+        // Even though the "from" field is the contract, the signer of the message to the contract
+        // will be required to pay the fee.  This message is essentially an intermediary that tells
+        // the Provenance Blockchain to charge the fee from the sender of the contract execute
+        // message.
+        contract_address,
+        // If this recipient field is not provided, then the entirety of the fee is sent to the
+        // Provenance Blockchain fee module.  In this case, though, the admin requires a cut of
+        // the charged fee, so it is specified here.
+        Some(admin_address),
+    )?)
 }
 
 // cancel ask entrypoint
@@ -544,7 +628,8 @@ mod tests {
     use cosmwasm_std::{CosmosMsg, Uint128};
     use provwasm_mocks::mock_dependencies;
     use provwasm_std::{
-        MetadataMsgParams, NameMsgParams, ProvenanceMsg, ProvenanceMsgParams, ProvenanceRoute,
+        MetadataMsgParams, MsgFeesMsgParams, NameMsgParams, ProvenanceMsg, ProvenanceMsgParams,
+        ProvenanceRoute,
     };
 
     use crate::contract_info::{ContractInfo, CONTRACT_TYPE, CONTRACT_VERSION};
@@ -670,6 +755,8 @@ mod tests {
         let init_msg = InstantiateMsg {
             bind_name: "contract_bind_name".to_string(),
             contract_name: "contract_name".to_string(),
+            ask_fee: None,
+            bid_fee: None,
         };
 
         // initialize
@@ -697,6 +784,8 @@ mod tests {
                     contract_name: "contract_name".to_string(),
                     contract_type: CONTRACT_TYPE.into(),
                     contract_version: CONTRACT_VERSION.into(),
+                    ask_fee: None,
+                    bid_fee: None,
                 };
 
                 assert_eq!(init_response.attributes.len(), 2);
@@ -718,6 +807,8 @@ mod tests {
         let init_msg = InstantiateMsg {
             bind_name: "".to_string(),
             contract_name: "contract_name".to_string(),
+            ask_fee: None,
+            bid_fee: None,
         };
 
         // initialize
@@ -732,15 +823,17 @@ mod tests {
                 }
                 error => panic!("unexpected error: {:?}", error),
             },
-        }
+        };
 
         let init_msg = InstantiateMsg {
             bind_name: "bind_name".to_string(),
             contract_name: "".to_string(),
+            ask_fee: None,
+            bid_fee: None,
         };
 
         // initialize
-        let init_response = instantiate(deps.as_mut(), mock_env(), info, init_msg);
+        let init_response = instantiate(deps.as_mut(), mock_env(), info.to_owned(), init_msg);
 
         // verify initialize response
         match init_response {
@@ -751,163 +844,65 @@ mod tests {
                 }
                 error => panic!("unexpected error: {:?}", error),
             },
-        }
+        };
+
+        let init_msg = InstantiateMsg {
+            bind_name: "bind_name".to_string(),
+            contract_name: "contract_name".to_string(),
+            ask_fee: Some(Uint128::zero()),
+            bid_fee: None,
+        };
+
+        let init_response = instantiate(deps.as_mut(), mock_env(), info.to_owned(), init_msg);
+
+        match init_response {
+            Ok(_) => panic!("expected error, but init_response ok"),
+            Err(error) => match error {
+                ContractError::InvalidFee { fee_type } => {
+                    assert_eq!(fee_type, "ask");
+                }
+                error => panic!("unexpected error: {:?}", error),
+            },
+        };
+
+        let init_msg = InstantiateMsg {
+            bind_name: "bind_name".to_string(),
+            contract_name: "contract_name".to_string(),
+            ask_fee: Some(Uint128::new(100)),
+            bid_fee: Some(Uint128::zero()),
+        };
+
+        let init_response = instantiate(deps.as_mut(), mock_env(), info, init_msg);
+
+        match init_response {
+            Ok(_) => panic!("expected error, but init_response ok"),
+            Err(error) => match error {
+                ContractError::InvalidFee { fee_type } => {
+                    assert_eq!(fee_type, "bid");
+                }
+                error => panic!("unexpected error: {:?}", error),
+            },
+        };
     }
 
     #[test]
-    fn create_ask_for_coin_with_valid_data() {
-        let mut deps = mock_dependencies(&[]);
-        if let Err(error) = set_contract_info(
-            &mut deps.storage,
-            &ContractInfo::new(
-                Addr::unchecked("contract_admin"),
-                "contract_bind_name".into(),
-                "contract_name".into(),
-            ),
-        ) {
-            panic!("unexpected error: {:?}", error)
-        }
-
-        // create ask data
-        let create_ask_msg = ExecuteMsg::CreateAsk {
-            id: "ask_id".into(),
-            quote: coins(100, "quote_1"),
-            scope_address: None,
-        };
-
-        let asker_info = mock_info("asker", &coins(2, "base_1"));
-
-        // handle create ask
-        let create_ask_response = execute(
-            deps.as_mut(),
-            mock_env(),
-            asker_info.clone(),
-            create_ask_msg.clone(),
-        );
-
-        // verify handle create ask response
-        match create_ask_response {
-            Ok(response) => {
-                assert_eq!(response.attributes.len(), 1);
-                assert_eq!(response.attributes[0], attr("action", "create_ask"));
-            }
-            Err(error) => {
-                panic!("failed to create ask: {:?}", error)
-            }
-        }
-
-        // verify ask order stored
-        let ask_storage = get_ask_storage_read_v2(&deps.storage);
-        if let ExecuteMsg::CreateAsk {
-            id,
-            quote,
-            scope_address: None,
-        } = create_ask_msg
-        {
-            match ask_storage.load("ask_id".to_string().as_bytes()) {
-                Ok(stored_order) => {
-                    assert_eq!(
-                        stored_order,
-                        AskOrderV2 {
-                            base: BaseType::coins(asker_info.funds),
-                            id,
-                            owner: asker_info.sender,
-                            quote,
-                        }
-                    )
-                }
-                _ => {
-                    panic!("ask order was not found in storage")
-                }
-            }
-        } else {
-            panic!("ask_message is not a CreateAsk type. this is bad.")
-        }
+    fn create_ask_for_coin_with_valid_data_no_fee() {
+        test_valid_coin_ask(None);
     }
 
     #[test]
-    fn test_create_ask_for_scope_with_valid_data() {
-        let mut deps = mock_dependencies(&[]);
-        if let Err(error) = set_contract_info(
-            &mut deps.storage,
-            &ContractInfo::new(
-                Addr::unchecked("contract_admin"),
-                "contract_bind_name".into(),
-                "contract_name".into(),
-            ),
-        ) {
-            panic!("unexpected error: {:?}", error)
-        }
+    fn create_ask_for_coin_with_valid_data_and_fee() {
+        test_valid_coin_ask(Some(500));
+    }
 
-        let scope_address = "scope1qraczfp249d3rmysdurne8cxrwmqamu8tk".to_string();
+    #[test]
+    fn test_create_ask_for_scope_with_valid_data_no_fee() {
+        test_valid_scope_ask(None);
+    }
 
-        // create ask data
-        let create_ask_msg = ExecuteMsg::CreateAsk {
-            id: "ask_id".into(),
-            quote: coins(100, "quote_1"),
-            scope_address: Some(scope_address.clone()),
-        };
-
-        let asker_info = mock_info("asker", &[]);
-
-        deps.querier.with_scope(Scope {
-            scope_id: scope_address.clone(),
-            specification_id: "scopespec1qs0lctxj49wprm9xwxt5wk0paswqzkdaax".to_string(),
-            owners: vec![Party {
-                address: Addr::unchecked(MOCK_CONTRACT_ADDR),
-                role: PartyType::Owner,
-            }],
-            data_access: vec![],
-            value_owner_address: Addr::unchecked(MOCK_CONTRACT_ADDR),
-        });
-
-        // handle create ask
-        let create_ask_response = execute(
-            deps.as_mut(),
-            mock_env(),
-            asker_info.clone(),
-            create_ask_msg.clone(),
-        );
-
-        // verify handle create ask response
-        match create_ask_response {
-            Ok(response) => {
-                assert_eq!(response.attributes.len(), 1);
-                assert_eq!(response.attributes[0], attr("action", "create_ask"));
-                assert!(response.messages.is_empty());
-            }
-            Err(error) => {
-                panic!("failed to create ask: {:?}", error)
-            }
-        }
-
-        // verify ask order stored
-        let ask_storage = get_ask_storage_read_v2(&deps.storage);
-        if let ExecuteMsg::CreateAsk {
-            id,
-            quote,
-            scope_address,
-        } = create_ask_msg
-        {
-            match ask_storage.load("ask_id".to_string().as_bytes()) {
-                Ok(stored_order) => {
-                    assert_eq!(
-                        stored_order,
-                        AskOrderV2 {
-                            base: BaseType::scope(scope_address.unwrap()),
-                            id,
-                            owner: asker_info.sender,
-                            quote,
-                        }
-                    )
-                }
-                _ => {
-                    panic!("ask order was not found in storage")
-                }
-            }
-        } else {
-            panic!("ask_message is not a CreateAsk type. this is bad.")
-        }
+    #[test]
+    fn test_create_ask_for_scope_with_valid_data_and_fee() {
+        test_valid_scope_ask(Some(1000000));
     }
 
     #[test]
@@ -919,6 +914,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -1179,75 +1176,13 @@ mod tests {
     }
 
     #[test]
-    fn create_bid_with_valid_data() {
-        let mut deps = mock_dependencies(&[]);
-        if let Err(error) = set_contract_info(
-            &mut deps.storage,
-            &ContractInfo::new(
-                Addr::unchecked("contract_admin"),
-                "contract_bind_name".into(),
-                "contract_name".into(),
-            ),
-        ) {
-            panic!("unexpected error: {:?}", error)
-        }
+    fn test_create_coin_bid_with_valid_data_no_fee() {
+        test_valid_coin_bid(None);
+    }
 
-        // create bid data
-        let create_bid_msg = ExecuteMsg::CreateBid {
-            id: "bid_id".into(),
-            base: BaseType::coin(100, "base_1"),
-            effective_time: Some(Timestamp::default()),
-        };
-
-        let bidder_info = mock_info("bidder", &coins(2, "mark_2"));
-
-        // execute create bid
-        let create_bid_response = execute(
-            deps.as_mut(),
-            mock_env(),
-            bidder_info.clone(),
-            create_bid_msg.clone(),
-        );
-
-        // verify execute create bid response
-        match create_bid_response {
-            Ok(response) => {
-                assert_eq!(response.attributes.len(), 1);
-                assert_eq!(response.attributes[0], attr("action", "create_bid"));
-            }
-            Err(error) => {
-                panic!("failed to create bid: {:?}", error)
-            }
-        }
-
-        // verify bid order stored
-        let bid_storage = get_bid_storage_read_v2(&deps.storage);
-        if let ExecuteMsg::CreateBid {
-            id,
-            base,
-            effective_time,
-        } = create_bid_msg
-        {
-            match bid_storage.load("bid_id".to_string().as_bytes()) {
-                Ok(stored_order) => {
-                    assert_eq!(
-                        stored_order,
-                        BidOrderV2 {
-                            base,
-                            effective_time,
-                            id,
-                            owner: bidder_info.sender,
-                            quote: bidder_info.funds,
-                        }
-                    )
-                }
-                _ => {
-                    panic!("bid order was not found in storage")
-                }
-            }
-        } else {
-            panic!("bid_message is not a CreateBid type. this is bad.")
-        }
+    #[test]
+    fn test_create_coin_bid_with_valid_data_and_fee() {
+        test_valid_coin_bid(Some(12345));
     }
 
     #[test]
@@ -1259,6 +1194,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -1342,75 +1279,13 @@ mod tests {
     }
 
     #[test]
-    fn create_valid_bid_for_scope() {
-        let mut deps = mock_dependencies(&[]);
-        if let Err(error) = set_contract_info(
-            &mut deps.storage,
-            &ContractInfo::new(
-                Addr::unchecked("contract_admin"),
-                "contract_bind_name".into(),
-                "contract_name".into(),
-            ),
-        ) {
-            panic!("unexpected error: {:?}", error)
-        }
+    fn test_create_scope_bid_with_valid_data_no_fee() {
+        test_valid_scope_bid(None);
+    }
 
-        // create bid data
-        let create_bid_msg = ExecuteMsg::CreateBid {
-            id: "bid_id".into(),
-            base: BaseType::scope("scope1234"),
-            effective_time: Some(Timestamp::default()),
-        };
-
-        let bidder_info = mock_info("bidder", &coins(2, "mark_2"));
-
-        // execute create bid
-        let create_bid_response = execute(
-            deps.as_mut(),
-            mock_env(),
-            bidder_info.clone(),
-            create_bid_msg.clone(),
-        );
-
-        // verify execute create bid response
-        match create_bid_response {
-            Ok(response) => {
-                assert_eq!(response.attributes.len(), 1);
-                assert_eq!(response.attributes[0], attr("action", "create_bid"));
-            }
-            Err(error) => {
-                panic!("failed to create bid: {:?}", error)
-            }
-        }
-
-        // verify bid order stored
-        let bid_storage = get_bid_storage_read_v2(&deps.storage);
-        if let ExecuteMsg::CreateBid {
-            id,
-            base,
-            effective_time,
-        } = create_bid_msg
-        {
-            match bid_storage.load("bid_id".to_string().as_bytes()) {
-                Ok(stored_order) => {
-                    assert_eq!(
-                        stored_order,
-                        BidOrderV2 {
-                            base,
-                            effective_time,
-                            id,
-                            owner: bidder_info.sender,
-                            quote: bidder_info.funds,
-                        }
-                    )
-                }
-                _ => {
-                    panic!("bid order was not found in storage")
-                }
-            }
-        } else {
-            panic!("bid_message is not a CreateBid type. this is bad.")
-        }
+    #[test]
+    fn test_create_scope_bid_with_valid_data_and_fee() {
+        test_valid_scope_bid(Some(3434234));
     }
 
     #[test]
@@ -1422,6 +1297,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -1548,6 +1425,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -1718,6 +1597,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -1823,6 +1704,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -1918,6 +1801,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -2015,6 +1900,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -2166,6 +2053,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -2304,6 +2193,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                None,
+                None,
             ),
         ) {
             panic!("unexpected error: {:?}", error)
@@ -2384,6 +2275,331 @@ mod tests {
         match base_type {
             BaseType::Scope { scope_address } => action(scope_address),
             _ => panic!("Unexpected base type of coin"),
+        }
+    }
+
+    fn match_create_response(
+        response: Result<Response<ProvenanceMsg>, ContractError>,
+        expected_fee_type: &str,
+        expected_action_attribute_value: &str,
+        expected_fee: Option<u128>,
+    ) {
+        match response {
+            Ok(response) => {
+                assert_eq!(
+                    response.attributes.len(),
+                    1 + if expected_fee.is_some() { 1 } else { 0 }
+                );
+                assert_eq!(
+                    response.attributes[0],
+                    attr("action", expected_action_attribute_value)
+                );
+                if let Some(fee) = expected_fee {
+                    assert_eq!(
+                        response.attributes[1],
+                        attr("fee_charged", format!("{}nhash", fee.to_string())),
+                    );
+                    assert_eq!(1, response.messages.len());
+                    match &response.messages.first().unwrap().msg {
+                        CosmosMsg::Custom(ProvenanceMsg {
+                            params:
+                                ProvenanceMsgParams::MsgFees(MsgFeesMsgParams::AssessCustomFee {
+                                    amount,
+                                    name,
+                                    from,
+                                    recipient,
+                                }),
+                            ..
+                        }) => {
+                            assert_eq!(fee, amount.amount.u128());
+                            assert_eq!("nhash", amount.denom);
+                            assert_eq!(
+                                format!("{} creation fee", expected_fee_type),
+                                name.to_owned().unwrap()
+                            );
+                            assert_eq!(MOCK_CONTRACT_ADDR, from.as_str());
+                            assert_eq!("contract_admin", recipient.to_owned().unwrap().as_str());
+                        }
+                        msg => panic!("unexpected msg: {:?}", msg),
+                    }
+                } else {
+                    assert!(response.messages.is_empty());
+                }
+            }
+            Err(error) => {
+                panic!("failed to create {}: {:?}", expected_fee_type, error)
+            }
+        }
+    }
+
+    fn test_valid_coin_ask(ask_fee: Option<u128>) {
+        let mut deps = mock_dependencies(&[]);
+        if let Err(error) = set_contract_info(
+            &mut deps.storage,
+            &ContractInfo::new(
+                Addr::unchecked("contract_admin"),
+                "contract_bind_name".into(),
+                "contract_name".into(),
+                ask_fee.to_owned().map(Uint128::new),
+                None,
+            ),
+        ) {
+            panic!("unexpected error: {:?}", error)
+        }
+
+        // create ask data
+        let create_ask_msg = ExecuteMsg::CreateAsk {
+            id: "ask_id".into(),
+            quote: coins(100, "quote_1"),
+            scope_address: None,
+        };
+
+        let asker_info = mock_info("asker", &coins(2, "base_1"));
+
+        // handle create ask
+        let create_ask_response = execute(
+            deps.as_mut(),
+            mock_env(),
+            asker_info.clone(),
+            create_ask_msg.clone(),
+        );
+
+        // verify handle create ask response
+        match_create_response(create_ask_response, "Ask", "create_ask", ask_fee);
+
+        // verify ask order stored
+        let ask_storage = get_ask_storage_read_v2(&deps.storage);
+        if let ExecuteMsg::CreateAsk {
+            id,
+            quote,
+            scope_address: None,
+        } = create_ask_msg
+        {
+            match ask_storage.load("ask_id".to_string().as_bytes()) {
+                Ok(stored_order) => {
+                    assert_eq!(
+                        stored_order,
+                        AskOrderV2 {
+                            base: BaseType::coins(asker_info.funds),
+                            id,
+                            owner: asker_info.sender,
+                            quote,
+                        }
+                    )
+                }
+                _ => {
+                    panic!("ask order was not found in storage")
+                }
+            }
+        } else {
+            panic!("ask_message is not a CreateAsk type. this is bad.")
+        }
+    }
+
+    fn test_valid_scope_ask(ask_fee: Option<u128>) {
+        let mut deps = mock_dependencies(&[]);
+        if let Err(error) = set_contract_info(
+            &mut deps.storage,
+            &ContractInfo::new(
+                Addr::unchecked("contract_admin"),
+                "contract_bind_name".into(),
+                "contract_name".into(),
+                ask_fee.to_owned().map(Uint128::new),
+                None,
+            ),
+        ) {
+            panic!("unexpected error: {:?}", error)
+        }
+
+        let scope_address = "scope1qraczfp249d3rmysdurne8cxrwmqamu8tk".to_string();
+
+        // create ask data
+        let create_ask_msg = ExecuteMsg::CreateAsk {
+            id: "ask_id".into(),
+            quote: coins(100, "quote_1"),
+            scope_address: Some(scope_address.clone()),
+        };
+
+        let asker_info = mock_info("asker", &[]);
+
+        deps.querier.with_scope(Scope {
+            scope_id: scope_address.clone(),
+            specification_id: "scopespec1qs0lctxj49wprm9xwxt5wk0paswqzkdaax".to_string(),
+            owners: vec![Party {
+                address: Addr::unchecked(MOCK_CONTRACT_ADDR),
+                role: PartyType::Owner,
+            }],
+            data_access: vec![],
+            value_owner_address: Addr::unchecked(MOCK_CONTRACT_ADDR),
+        });
+
+        // handle create ask
+        let create_ask_response = execute(
+            deps.as_mut(),
+            mock_env(),
+            asker_info.clone(),
+            create_ask_msg.clone(),
+        );
+
+        // verify handle create ask response
+        match_create_response(create_ask_response, "Ask", "create_ask", ask_fee);
+
+        // verify ask order stored
+        let ask_storage = get_ask_storage_read_v2(&deps.storage);
+        if let ExecuteMsg::CreateAsk {
+            id,
+            quote,
+            scope_address,
+        } = create_ask_msg
+        {
+            match ask_storage.load("ask_id".to_string().as_bytes()) {
+                Ok(stored_order) => {
+                    assert_eq!(
+                        stored_order,
+                        AskOrderV2 {
+                            base: BaseType::scope(scope_address.unwrap()),
+                            id,
+                            owner: asker_info.sender,
+                            quote,
+                        }
+                    )
+                }
+                _ => {
+                    panic!("ask order was not found in storage")
+                }
+            }
+        } else {
+            panic!("ask_message is not a CreateAsk type. this is bad.")
+        }
+    }
+
+    fn test_valid_coin_bid(bid_fee: Option<u128>) {
+        let mut deps = mock_dependencies(&[]);
+        if let Err(error) = set_contract_info(
+            &mut deps.storage,
+            &ContractInfo::new(
+                Addr::unchecked("contract_admin"),
+                "contract_bind_name".into(),
+                "contract_name".into(),
+                None,
+                bid_fee.to_owned().map(Uint128::new),
+            ),
+        ) {
+            panic!("unexpected error: {:?}", error)
+        }
+
+        // create bid data
+        let create_bid_msg = ExecuteMsg::CreateBid {
+            id: "bid_id".into(),
+            base: BaseType::coin(100, "base_1"),
+            effective_time: Some(Timestamp::default()),
+        };
+
+        let bidder_info = mock_info("bidder", &coins(2, "mark_2"));
+
+        // execute create bid
+        let create_bid_response = execute(
+            deps.as_mut(),
+            mock_env(),
+            bidder_info.clone(),
+            create_bid_msg.clone(),
+        );
+
+        // verify execute create bid response
+        match_create_response(create_bid_response, "Bid", "create_bid", bid_fee);
+
+        // verify bid order stored
+        let bid_storage = get_bid_storage_read_v2(&deps.storage);
+        if let ExecuteMsg::CreateBid {
+            id,
+            base,
+            effective_time,
+        } = create_bid_msg
+        {
+            match bid_storage.load("bid_id".to_string().as_bytes()) {
+                Ok(stored_order) => {
+                    assert_eq!(
+                        stored_order,
+                        BidOrderV2 {
+                            base,
+                            effective_time,
+                            id,
+                            owner: bidder_info.sender,
+                            quote: bidder_info.funds,
+                        }
+                    )
+                }
+                _ => {
+                    panic!("bid order was not found in storage")
+                }
+            }
+        } else {
+            panic!("bid_message is not a CreateBid type. this is bad.")
+        }
+    }
+
+    fn test_valid_scope_bid(bid_fee: Option<u128>) {
+        let mut deps = mock_dependencies(&[]);
+        if let Err(error) = set_contract_info(
+            &mut deps.storage,
+            &ContractInfo::new(
+                Addr::unchecked("contract_admin"),
+                "contract_bind_name".into(),
+                "contract_name".into(),
+                None,
+                bid_fee.to_owned().map(Uint128::new),
+            ),
+        ) {
+            panic!("unexpected error: {:?}", error)
+        }
+
+        // create bid data
+        let create_bid_msg = ExecuteMsg::CreateBid {
+            id: "bid_id".into(),
+            base: BaseType::scope("scope1234"),
+            effective_time: Some(Timestamp::default()),
+        };
+
+        let bidder_info = mock_info("bidder", &coins(2, "mark_2"));
+
+        // execute create bid
+        let create_bid_response = execute(
+            deps.as_mut(),
+            mock_env(),
+            bidder_info.clone(),
+            create_bid_msg.clone(),
+        );
+
+        // verify execute create bid response
+        match_create_response(create_bid_response, "Bid", "create_bid", bid_fee);
+
+        // verify bid order stored
+        let bid_storage = get_bid_storage_read_v2(&deps.storage);
+        if let ExecuteMsg::CreateBid {
+            id,
+            base,
+            effective_time,
+        } = create_bid_msg
+        {
+            match bid_storage.load("bid_id".to_string().as_bytes()) {
+                Ok(stored_order) => {
+                    assert_eq!(
+                        stored_order,
+                        BidOrderV2 {
+                            base,
+                            effective_time,
+                            id,
+                            owner: bidder_info.sender,
+                            quote: bidder_info.funds,
+                        }
+                    )
+                }
+                _ => {
+                    panic!("bid order was not found in storage")
+                }
+            }
+        } else {
+            panic!("bid_message is not a CreateBid type. this is bad.")
         }
     }
 }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Storage};
+use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -18,16 +18,26 @@ pub struct ContractInfo {
     pub contract_name: String,
     pub contract_type: String,
     pub contract_version: String,
+    pub ask_fee: Option<Uint128>,
+    pub bid_fee: Option<Uint128>,
 }
 
 impl ContractInfo {
-    pub fn new(admin: Addr, bind_name: String, contract_name: String) -> ContractInfo {
+    pub fn new(
+        admin: Addr,
+        bind_name: String,
+        contract_name: String,
+        ask_fee: Option<Uint128>,
+        bid_fee: Option<Uint128>,
+    ) -> ContractInfo {
         ContractInfo {
             admin,
             bind_name,
             contract_name,
             contract_type: CONTRACT_TYPE.into(),
             contract_version: CONTRACT_VERSION.into(),
+            ask_fee,
+            bid_fee,
         }
     }
 }
@@ -51,7 +61,7 @@ mod tests {
     use crate::contract_info::{
         get_contract_info, set_contract_info, ContractInfo, CONTRACT_TYPE, CONTRACT_VERSION,
     };
-    use cosmwasm_std::Addr;
+    use cosmwasm_std::{Addr, Uint128};
 
     #[test]
     pub fn set_contract_info_with_valid_data() {
@@ -62,6 +72,8 @@ mod tests {
                 Addr::unchecked("contract_admin"),
                 "contract_bind_name".into(),
                 "contract_name".into(),
+                Some(Uint128::new(50)),
+                Some(Uint128::new(100)),
             ),
         );
         match result {
