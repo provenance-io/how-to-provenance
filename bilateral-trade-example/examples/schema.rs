@@ -3,9 +3,9 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use bilateral_exchange::contract_info::ContractInfo;
-use bilateral_exchange::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use bilateral_exchange::state::{AskOrder, BidOrder};
+use bilateral_trade_example::contract_info::ContractInfo;
+use bilateral_trade_example::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use bilateral_trade_example::state::{AskOrder, BidOrder};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

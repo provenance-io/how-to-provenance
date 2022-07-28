@@ -1,7 +1,7 @@
 [versions]
 hdWallet = "0.1.15"
-pbClient = "1.0.5"
-provenance = "1.8.0"
+pbClient = "1.1.1"
+provenance = "1.11.1"
 
 [libraries]
 hdWallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "hdWallet" }

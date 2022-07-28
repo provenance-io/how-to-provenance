@@ -24,6 +24,11 @@ pub enum ContractError {
         explanation: String,
     },
 
+    #[error(
+        "Invalid {fee_type} fee provided. The value must be omitted, or set to a value above zero"
+    )]
+    InvalidFee { fee_type: String },
+
     #[error("Missing field: {field:?}")]
     MissingField { field: String },
 
@@ -35,4 +40,7 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Cannot send funds when updating fees")]
+    UpdateFeesWithFunds {},
 }

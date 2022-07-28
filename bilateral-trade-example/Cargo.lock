@@ -22,7 +22,7 @@ checksum = "3bdca834647821e0b13d9539a8634eb62d3501b6b6c2cec1722786ee6671b851"
 
 [[package]]
 name = "bilateral-trade-example"
-version = "1.0.0-beta"
+version = "1.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -376,9 +376,9 @@ dependencies = [
 
 [[package]]
 name = "provwasm-mocks"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d50a6b2160bfd9be6f31b6460a8d0a2a5e46bb2c5ef84299b91573760f6699f"
+checksum = "b90b0dc19138397cabf8050dc4a7ddbb47dc3e7ba5e1a50cae23a014f436c4f1"
 dependencies = [
  "cosmwasm-std",
  "provwasm-std",
@@ -388,9 +388,9 @@ dependencies = [
 
 [[package]]
 name = "provwasm-std"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0e11a20ee310c90a0cd5f903125ed10195b32e725cc08a18a1d3fb3a4caf110"
+checksum = "6af27a7939f7a89df3937d9eb05de442154dc29e51716e5704af2019705b1593"
 dependencies = [
  "cosmwasm-std",
  "schemars",
