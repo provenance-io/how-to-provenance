@@ -1,14 +1,14 @@
 [versions]
-provenanceClient = "1.0.5"
-provenanceHdWallet = "0.1.15"
-provenanceProto = "1.8.0-rc10"
-provenanceScope = "0.4.9"
+figureTechHdWallet = "0.2.0"
+provenanceClient = "1.2.0"
+provenanceProto = "1.12.0"
+provenanceScope = "0.6.2"
 
 [libraries]
+figureTechHdWallet = { module = "tech.figure.hdwallet:hdwallet", version.ref = "figureTechHdWallet" }
 provenanceGrpcClient = { module = "io.provenance.client:pb-grpc-client-kotlin", version.ref = "provenanceClient" }
-provenanceHdWallet = { module = "io.provenance.hdwallet:hdwallet", version.ref = "provenanceHdWallet" }
 provenanceProto = { module = "io.provenance:proto-kotlin", version.ref = "provenanceProto" }
 scopeSdkUtil = { module = "io.provenance.scope:util", version.ref = "provenanceScope" }
 
 [bundles]
-provenance = ["provenanceGrpcClient", "provenanceHdWallet", "provenanceProto", "scopeSdkUtil"]
+provenance = ["provenanceGrpcClient", "provenanceProto", "scopeSdkUtil"]

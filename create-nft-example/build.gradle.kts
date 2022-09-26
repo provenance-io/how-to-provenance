@@ -14,6 +14,7 @@ repositories {
 
 dependencies {
     listOf(
+        libs.figureTechHdWallet,
         libs.bundles.provenance,
     ).forEach(::implementation)
 
