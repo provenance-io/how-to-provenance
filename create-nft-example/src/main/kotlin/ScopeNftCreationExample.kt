@@ -46,7 +46,7 @@ class ScopeNftCreationExample {
         println("Please enter your mnemonic")
     }
     val mnemonic = readLine()!!
-    val signer = fromMnemonic(NetworkType.COSMOS_TESTNET, mnemonic)
+    val signer = fromMnemonic(NetworkType(prefix = "tp", path = "m/44'/1'/0'/0/0"), mnemonic)
 
     init {
         println("Please enter a value for the record")
