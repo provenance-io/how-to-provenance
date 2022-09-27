@@ -31,8 +31,8 @@ import java.util.UUID
  */
 class ScopeNftCreationExample {
     // configuration
-    val chainId = System.getenv("CHAIN_ID") ?: "chain-local"
-    val nodeUri = System.getenv("NODE_URI") ?: "grpc://localhost:9090"
+    val chainId = "pio-testnet-1"
+    val nodeUri = "grpcs://grpc.test.provenance.io:443"
     val pbClient = PbClient(chainId, URI(nodeUri), GasEstimationMethod.MSG_FEE_CALCULATION)
 
     val scopeSpecUuid = System.getenv("SCOPE_SPEC_UUID")?.toUuid() ?: UUID.randomUUID()
