@@ -24,7 +24,7 @@
     "react-app-polyfill": "2.0.0",
     "react-dom": "17.0.2",
     "react-error-overlay": "^6.0.9",
-    "react-scripts": "4.0.3",
+    "react-scripts": "5.0.1",
     "styled-components": "^5.3.3"
   },
   "scripts": {
