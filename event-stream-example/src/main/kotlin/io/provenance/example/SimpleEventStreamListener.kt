@@ -1,14 +1,14 @@
 package io.provenance.example
 
-import io.provenance.eventstream.decoder.moshiDecoderAdapter
-import io.provenance.eventstream.extensions.decodeBase64
-import io.provenance.eventstream.net.okHttpNetAdapter
-import io.provenance.eventstream.stream.flows.blockDataFlow
-import io.provenance.eventstream.stream.flows.pollingBlockDataFlow
-import io.provenance.eventstream.stream.models.extensions.dateTime
-import io.provenance.eventstream.stream.models.extensions.txData
-import io.provenance.eventstream.stream.models.extensions.txEvents
 import kotlinx.coroutines.flow.collect
+import tech.figure.eventstream.decodeBase64
+import tech.figure.eventstream.decoder.moshiDecoderAdapter
+import tech.figure.eventstream.net.okHttpNetAdapter
+import tech.figure.eventstream.stream.flows.blockDataFlow
+import tech.figure.eventstream.stream.flows.pollingBlockDataFlow
+import tech.figure.eventstream.stream.models.dateTime
+import tech.figure.eventstream.stream.models.txData
+import tech.figure.eventstream.stream.models.txEvents
 
 val EVENTS = listOf("wasm")
 
