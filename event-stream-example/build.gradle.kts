@@ -14,6 +14,7 @@ application {
 
 dependencies {
     listOf(
+        libs.bundles.eventstream,
         libs.bundles.provenance,
         libs.bundles.coroutines,
         libs.bundles.kafka,
