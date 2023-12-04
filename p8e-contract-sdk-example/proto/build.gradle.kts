@@ -14,7 +14,7 @@ plugins {
 
 dependencies {
     // at compile time we need access to ProtoHash on the classpath
-    compileOnly("io.provenance.scope:contract-base:0.4.9")
+    compileOnly("io.provenance.scope:contract-base:0.7.0")
     implementation("com.google.protobuf:protobuf-kotlin:3.20.0")
 }
 
