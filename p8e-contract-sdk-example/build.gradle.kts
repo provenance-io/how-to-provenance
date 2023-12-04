@@ -3,8 +3,8 @@ import io.provenance.p8e.plugin.P8ePartyExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.20"
-    id("io.provenance.p8e.p8e-publish") version "0.6.3"
+    kotlin("jvm") version "1.9.21"
+    id("io.provenance.p8e.p8e-publish") version "0.8.1"
 }
 
 repositories {
@@ -23,7 +23,7 @@ subprojects {
     version = "1.0-SNAPSHOT"
 
     tasks.withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "11"
+        kotlinOptions.jvmTarget = "17"
     }
 }
 
