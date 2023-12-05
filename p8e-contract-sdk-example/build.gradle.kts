@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.21"
-    id("io.provenance.p8e.p8e-publish") version "0.8.1"
+    id("io.provenance.p8e.p8e-publish") version "0.8.2"
 }
 
 repositories {
@@ -38,6 +38,7 @@ p8e {
         "local" to P8eLocationExtension().also {
             it.osUrl = System.getenv("OS_GRPC_URL")
             it.provenanceUrl = System.getenv("PROVENANCE_GRPC_URL")
+            it.provenanceQueryTimeoutSeconds = "20"
             it.encryptionPrivateKey = System.getenv("ENCRYPTION_PRIVATE_KEY")
             it.signingPrivateKey = System.getenv("SIGNING_PRIVATE_KEY")
             it.chainId = System.getenv("CHAIN_ID")
