@@ -98,6 +98,7 @@ fun loadScope(scopeUuid: UUID): ScopeResponse =
         scopeId = scopeUuid.toString()
         includeSessions = true
         includeRecords = true
+        includeRequest = true
     }.let { request ->
         pbcClient.metadataClient.withDeadlineAfter(10, TimeUnit.SECONDS).scope(request)
     }
